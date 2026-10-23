@@ -7,6 +7,28 @@
 ## 📄 Documento
 
 - [P1 ISW055 — João Serrano (assinado)](docs/P1_ISW055_Joao_Serrano_assinado.pdf)
+- [Documentação reversa (especificação, arquitetura, regras de negócio e modelo de dados)](DOCUMENTACAO.md)
+
+---
+
+## ☁️ Classificação SaaS / PaaS / IaaS
+
+| Peça | Camada | Por quê |
+|---|---|---|
+| VM Ubuntu no Proxmox | **IaaS** | Recebo uma máquina virtual crua e sou responsável pelo sistema operacional, pelo Docker e pelas atualizações. |
+| Docker Engine e rede `tomhanks-net` | **IaaS** | Instalado e mantido por mim dentro da VM; é a infraestrutura sobre a qual os containers rodam. |
+| Containers `app`, `auth-service`, `log-service`, `payment-service` | **PaaS** | Só entrego o código e as variáveis de ambiente; a stack sobe, reinicia e é atualizada pelo Portainer sem eu cuidar de servidor por container. |
+| Redis e MinIO (containers) | **PaaS** | São serviços de plataforma consumidos por API (stream/cache e objetos S3); eu configuro, mas não os desenvolvo. |
+| Prometheus e Grafana (containers) | **PaaS** | Plataforma de observabilidade pronta; só forneço configuração e dashboards. |
+| Portainer | **PaaS** | Camada de orquestração que recebe o repositório Git e faz o deploy da stack (com webhook do CI/CD). |
+| MariaDB externo (banco da turma) | **PaaS** | Banco relacional que me é entregue pronto; eu uso o schema, mas não administro o servidor. |
+| Stripe (Checkout, portal, webhook) | **SaaS** | Serviço de pagamentos completo, consumido pela internet; o cartão é digitado na página da Stripe, não no meu sistema. |
+| Google OAuth | **SaaS** | Login federado fornecido pronto pelo Google. |
+| TMDB API | **SaaS** | Base de filmes consumida por API; não guardo nem opero esses dados. |
+| Mailtrap (SMTP de e-mail transacional) | **SaaS** | Serviço de e-mail usado só para enviar o link de recuperação de senha. |
+| GitHub, GitHub Actions e GHCR | **SaaS** | Hospedagem do código, pipeline de CI/CD e registro de imagens, tudo como serviço. |
+
+> A classificação do MariaDB assume que ele é um servidor gerenciado pela turma (README: "banco de dados relacional oficial da turma"); se for uma VM minha, ele passa a ser IaaS.
 
 ---
 
