@@ -1,0 +1,653 @@
+<main class="page-shell">
+  <!-- Top Navigation Bar -->
+  <header class="app-nav" aria-label="Navegação principal">
+    <div class="nav-brand">
+      <span class="brand-icon">🎬</span>
+      <div>
+        <span class="brand-title">Tom Hanks</span>
+        <span class="brand-subtitle">Catálogo & Fan Club</span>
+      </div>
+    </div>
+
+    @if (user()) {
+      <nav class="nav-tabs" aria-label="Abas de conteúdo">
+        <button
+          type="button"
+          class="nav-tab"
+          [class.active]="activeTab() === 'catalog'"
+          (click)="activeTab.set('catalog')"
+        >
+          Filmes
+        </button>
+        <button
+          type="button"
+          class="nav-tab nav-tab--premium"
+          [class.active]="activeTab() === 'premium'"
+          (click)="activeTab.set('premium')"
+        >
+          <span class="crown-icon">👑</span> Premium
+        </button>
+        @if (user()?.role === 'admin') {
+          <button
+            type="button"
+            class="nav-tab"
+            [class.active]="activeTab() === 'admin'"
+            (click)="openAdminPanel()"
+          >
+            Operação
+          </button>
+        }
+      </nav>
+    }
+
+    <div class="nav-user">
+      @if (user()) {
+        <div class="user-pill" (click)="openEditProfile()" role="button" tabindex="0" (keydown.enter)="openEditProfile()" aria-label="Abrir perfil de usuário">
+          @if (user()?.avatar_url) {
+            <img [src]="user()?.avatar_url" alt="Avatar de {{ user()?.nome }}" class="user-avatar" />
+          } @else {
+            <span class="user-avatar user-avatar--fallback">{{ user()?.nome?.charAt(0)?.toUpperCase() }}</span>
+          }
+          <div class="user-details hide-on-mobile">
+            <span class="user-name">{{ user()?.nome }}</span>
+            <span class="user-badge" [class.user-badge--premium]="isPremium()">
+              {{ isPremium() ? 'PREMIUM' : user()?.role === 'admin' ? 'ADMIN' : 'FREE' }}
+            </span>
+          </div>
+        </div>
+        <button type="button" class="btn-ghost-sm" (click)="logout()" [disabled]="loading()" title="Sair da conta" aria-label="Sair da conta">
+          Sair
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- Feedback Notifications -->
+  @if (notice()) {
+    <div class="banner banner--success" role="status">
+      <span>{{ notice() }}</span>
+      <button type="button" class="banner-close" (click)="notice.set('')" aria-label="Fechar notificação">×</button>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="banner banner--error" role="alert">
+      <span>{{ error() }}</span>
+      <button type="button" class="banner-close" (click)="error.set('')" aria-label="Fechar mensagem de erro">×</button>
+    </div>
+  }
+
+  <!-- UNLOGGED STATE -->
+  @if (!user()) {
+    <div class="landing-grid">
+      <section class="landing-hero">
+        <span class="hero-badge">Coleção Especial</span>
+        <h1 class="hero-title">A carreira de Tom Hanks em um só lugar.</h1>
+        <p class="hero-desc">
+          Catálogo dinâmico alimentado pela TMDB. Crie sua conta para favoritar, comentar ou assine o plano Premium para ter acesso aos filmes que Tom dirigiu/produziu e insights de carreira exclusivos.
+        </p>
+        <div class="hero-perks">
+          <div class="perk-card">
+            <span class="perk-icon">⚡</span>
+            <strong>Tempo Real</strong>
+            <p>Dados TMDB atualizados sem poluir o banco de dados local.</p>
+          </div>
+          <div class="perk-card perk-card--accent">
+            <span class="perk-icon">💳</span>
+            <strong>Stripe Segura</strong>
+            <p>Assinatura no Checkout seguro com suporte ao Portal do Cliente.</p>
+          </div>
+          <div class="perk-card">
+            <span class="perk-icon">🌐</span>
+            <strong>Google OAuth</strong>
+            <p>Faça login em um clique com sua conta do Google.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="auth-panel" aria-labelledby="auth-tabs">
+        <div class="auth-box">
+          <div class="oauth-section">
+            <button
+              type="button"
+              class="btn-google"
+              (click)="loginWithGoogle()"
+              [disabled]="loading()"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              <span>Continuar com Google</span>
+            </button>
+            <div class="divider"><span>ou com e-mail</span></div>
+          </div>
+
+          <div class="auth-tabs" id="auth-tabs">
+            <button
+              type="button"
+              [class.active]="authMode() === 'login'"
+              (click)="switchMode('login')"
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              [class.active]="authMode() === 'register'"
+              (click)="switchMode('register')"
+            >
+              Registrar
+            </button>
+          </div>
+
+          @if (authMode() === 'login') {
+            <form class="form-stack" (submit)="$event.preventDefault()" (ngSubmit)="submitAuth($event)">
+              <label class="form-field">
+                <span>E-mail</span>
+                <input
+                  type="email"
+                  name="email"
+                  [(ngModel)]="loginForm.email"
+                  autocomplete="username"
+                  placeholder="voce@exemplo.com"
+                  required
+                />
+              </label>
+              <label class="form-field">
+                <span>Senha</span>
+                <input
+                  type="password"
+                  name="senha"
+                  [(ngModel)]="loginForm.senha"
+                  autocomplete="current-password"
+                  placeholder="••••••••"
+                  required
+                />
+              </label>
+              <button type="submit" class="btn-primary" [disabled]="loading()">Entrar no Catálogo</button>
+              <button type="button" class="btn-link" (click)="switchMode('forgot')" [disabled]="loading()">
+                Esqueci minha senha
+              </button>
+            </form>
+          } @else if (authMode() === 'register') {
+            <form class="form-stack" (submit)="$event.preventDefault()" (ngSubmit)="submitAuth($event)">
+              <label class="form-field">
+                <span>Nome completo</span>
+                <input
+                  type="text"
+                  name="nome"
+                  [(ngModel)]="registerForm.nome"
+                  autocomplete="name"
+                  placeholder="Seu nome"
+                  required
+                />
+              </label>
+              <label class="form-field">
+                <span>E-mail</span>
+                <input
+                  type="email"
+                  name="email"
+                  [(ngModel)]="registerForm.email"
+                  autocomplete="email"
+                  placeholder="voce@exemplo.com"
+                  required
+                />
+              </label>
+              <label class="form-field">
+                <span>Senha</span>
+                <input
+                  type="password"
+                  name="senha"
+                  [(ngModel)]="registerForm.senha"
+                  autocomplete="new-password"
+                  placeholder="Mínimo 6 caracteres"
+                  required
+                />
+              </label>
+              <button type="submit" class="btn-primary" [disabled]="loading()">Criar Conta Gratuita</button>
+            </form>
+          } @else if (authMode() === 'forgot') {
+            <form class="form-stack" (submit)="$event.preventDefault()" (ngSubmit)="submitForgotPassword($event)">
+              <label class="form-field">
+                <span>E-mail cadastrado</span>
+                <input
+                  type="email"
+                  name="forgot-email"
+                  [(ngModel)]="forgotForm.email"
+                  autocomplete="email"
+                  placeholder="voce@exemplo.com"
+                  required
+                />
+              </label>
+              <button type="submit" class="btn-primary" [disabled]="loading()">Recuperar Senha</button>
+              <button type="button" class="btn-link" (click)="switchMode('login')" [disabled]="loading()">
+                Voltar ao login
+              </button>
+            </form>
+          } @else {
+            <form class="form-stack" (submit)="$event.preventDefault()" (ngSubmit)="submitResetPassword($event)">
+              <label class="form-field">
+                <span>Nova senha</span>
+                <input
+                  type="password"
+                  name="reset-password"
+                  [(ngModel)]="resetForm.senha"
+                  autocomplete="new-password"
+                  placeholder="Mínimo 6 caracteres"
+                  required
+                />
+              </label>
+              <button type="submit" class="btn-primary" [disabled]="loading()">Salvar Nova Senha</button>
+            </form>
+          }
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- LOGGED IN STATE -->
+  @if (user()) {
+    <!-- MODAL EDIT PROFILE -->
+    @if (editingProfile()) {
+      <div class="modal-backdrop" (click)="closeEditProfile()">
+        <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+          <div class="modal-header">
+            <h3 id="modal-title">Editar Meu Perfil</h3>
+            <button type="button" class="modal-close" (click)="closeEditProfile()" aria-label="Fechar janela">×</button>
+          </div>
+          <form (submit)="$event.preventDefault()" (ngSubmit)="saveProfile($event)" class="form-stack">
+            <label class="form-field">
+              <span>Nome</span>
+              <input type="text" [(ngModel)]="profileForm.nome" name="profile-nome" required />
+            </label>
+            <label class="form-field">
+              <span>Bio curta</span>
+              <textarea [(ngModel)]="profileForm.bio" name="profile-bio" rows="3" placeholder="Fale sobre seus filmes favoritos do Tom Hanks"></textarea>
+            </label>
+            <label class="form-field">
+              <span>Nova foto de perfil</span>
+              <input type="file" (change)="onAvatarSelected($event)" accept="image/*" class="file-picker" />
+            </label>
+            <div class="modal-actions">
+              <button type="button" class="btn-ghost" (click)="closeEditProfile()">Cancelar</button>
+              <button type="submit" class="btn-primary" [disabled]="loading()">Salvar Perfil</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
+
+    <!-- TAB 1: CATALOG & FAVORITES -->
+    @if (activeTab() === 'catalog') {
+      <div class="content-container">
+        <!-- Favorites Section (if any) -->
+        @if (favorites().length > 0) {
+          <section class="section-favorites" aria-label="Meus Filmes Favoritos">
+            <div class="section-title-row">
+              <h2>⭐ Meus Favoritos ({{ favoriteCount() }})</h2>
+              <button type="button" class="btn-ghost-sm" (click)="refreshCatalog()">Atualizar</button>
+            </div>
+            <div class="favorites-scroller">
+              @for (fav of favorites(); track fav.tmdb_movie_id) {
+                <div class="fav-card">
+                  <img [src]="fav.poster_url || posterFallback" [alt]="fav.title" loading="lazy" />
+                  <div class="fav-meta">
+                    <h4>{{ fav.title }}</h4>
+                    <button type="button" class="btn-remove-fav" (click)="toggleFavorite(fav)" title="Remover favorito">
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- Main Catalog Grid -->
+        <section class="section-catalog" aria-label="Catálogo de Filmes">
+          <div class="section-title-row">
+            <div>
+              <h2>Catálogo Completo</h2>
+              <p class="section-subtitle">24 filmes mais populares estrelados por Tom Hanks</p>
+            </div>
+            <div class="catalog-summary">
+              <span>{{ commentCount() }} comentários totais</span>
+            </div>
+          </div>
+
+          <div class="movie-grid">
+            @for (movie of movies(); track trackMovie($index, movie)) {
+              <article class="movie-card">
+                <div class="movie-poster-wrap">
+                  <img [src]="movie.poster_url || posterFallback" [alt]="movie.title" loading="lazy" />
+                  <button
+                    type="button"
+                    class="fav-toggle-btn"
+                    [class.favorited]="movie.is_favorite"
+                    (click)="toggleFavorite(movie)"
+                    [attr.aria-label]="movie.is_favorite ? 'Remover dos favoritos' : 'Favoritar ' + movie.title"
+                  >
+                    ★
+                  </button>
+                </div>
+                <div class="movie-info">
+                  <span class="movie-year">{{ movie.release_date || 'Ano não informado' }}</span>
+                  <h3 class="movie-title">{{ movie.title }}</h3>
+                  <p class="movie-overview">{{ movie.overview }}</p>
+
+                  <!-- Comments Accordion -->
+                  <div class="comments-section">
+                    <h4 class="comments-toggle">
+                      💬 Comentários ({{ movie.comments.length }})
+                    </h4>
+
+                    @if (movie.comments.length > 0) {
+                      <div class="comments-feed">
+                        @for (c of movie.comments; track c.id) {
+                          <div class="comment-bubble">
+                            <div class="comment-head">
+                              <span class="comment-user">Usuário #{{ c.usuario_id }}</span>
+                              @if (canDeleteComment(c)) {
+                                <button type="button" class="btn-delete-comment" (click)="deleteComment(c.id)">Excluir</button>
+                              }
+                            </div>
+                            <p class="comment-text">{{ c.texto }}</p>
+                          </div>
+                        }
+                      </div>
+                    }
+
+                    <!-- New Comment Form -->
+                    <form class="comment-input-row" (submit)="$event.preventDefault()" (ngSubmit)="saveComment(movie)">
+                      <input
+                        type="text"
+                        name="draft-{{ movie.tmdb_movie_id }}"
+                        [(ngModel)]="movie.commentDraft"
+                        placeholder="Deixe uma opinião..."
+                        maxlength="500"
+                        aria-label="Adicionar comentário ao filme {{ movie.title }}"
+                      />
+                      <button type="submit" [disabled]="!movie.commentDraft.trim()">Enviar</button>
+                    </form>
+                  </div>
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      </div>
+    }
+
+    <!-- TAB 2: PREMIUM SERVICE (STRIPE) -->
+    @if (activeTab() === 'premium') {
+      <div class="content-container premium-container">
+        @if (!isPremium()) {
+          <!-- Upgrade Banner / Call to Action -->
+          <div class="premium-hero-cta">
+            <span class="premium-crown">👑</span>
+            <h2>Desbloqueie o Tom Hanks Fan Club Premium</h2>
+            <p class="lead">
+              Acesse conteúdos e bastidores exclusivos: filmes em que Tom Hanks trabalhou como diretor ou produtor executivo, além de métricas analíticas completas da sua carreira de 40+ anos.
+            </p>
+
+            <div class="premium-tier-card">
+              <div class="tier-header">
+                <h3>Plano Assinante Oficial</h3>
+                <div class="tier-price">
+                  <strong>R$ 9,90</strong><span>/mês</span>
+                </div>
+              </div>
+              <ul class="tier-features">
+                <li>✓ Watchlist exclusiva (Direção & Produção)</li>
+                <li>✓ Insights analíticos e métricas por década</li>
+                <li>✓ Selo Premium dourado no seu perfil</li>
+                <li>✓ Gerenciamento e cancelamento simples no Portal da Stripe</li>
+              </ul>
+              <button
+                type="button"
+                class="btn-cta-stripe"
+                (click)="startCheckout()"
+                [disabled]="loading()"
+              >
+                Assinar Agora com Stripe Checkout
+              </button>
+              <p class="stripe-safe-note">🔒 Nenhum dado de cartão passa pela nossa aplicação. Pagamento 100% hospedado pela Stripe.</p>
+            </div>
+          </div>
+        } @else {
+          <!-- User IS Premium -->
+          <div class="premium-active-bar">
+            <div class="active-badge">
+              <span class="crown-icon">👑</span>
+              <div>
+                <strong>Assinatura Premium Ativa</strong>
+                <span>Plano: {{ premiumStatus()?.entitlement?.plan || 'Assinante Oficial' }}</span>
+              </div>
+            </div>
+            <button type="button" class="btn-ghost" (click)="openCustomerPortal()" [disabled]="loading()">
+              Gerenciar Assinatura na Stripe
+            </button>
+          </div>
+
+          <!-- Feature 1: Insights de Carreira -->
+          @if (premiumInsights(); as ins) {
+            <section class="insights-section" aria-label="Estatísticas de Carreira">
+              <h3>📊 Insights Analíticos de Carreira</h3>
+              <div class="insights-grid">
+                <div class="stat-card">
+                  <span class="stat-num">{{ ins.total_movies }}</span>
+                  <span class="stat-lbl">Filmes no catálogo</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-num">{{ ins.average_rating ? ins.average_rating + ' / 10' : 'N/D' }}</span>
+                  <span class="stat-lbl">Avaliação Média TMDB</span>
+                </div>
+                <div class="stat-card stat-card--wide">
+                  <span class="stat-title">Filmes por Década</span>
+                  <div class="decade-bars">
+                    @for (item of ins.movies_by_decade | keyvalue; track item.key) {
+                      <div class="decade-bar-item">
+                        <span class="decade-label">{{ item.key }}</span>
+                        <div class="bar-fill" [style.width.%]="(item.value / ins.total_movies) * 100"></div>
+                        <span class="decade-count">{{ item.value }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-title">Gêneros Predominantes</span>
+                  <ul class="genre-list">
+                    @for (g of ins.top_genres; track g.genre) {
+                      <li>{{ g.genre }}: <strong>{{ g.count }}</strong></li>
+                    }
+                  </ul>
+                </div>
+              </div>
+            </section>
+          }
+
+          <!-- Feature 2: Watchlist Exclusiva (Direção / Produção) -->
+          <section class="watchlist-section" aria-label="Produções e Direções">
+            <h3>🎬 Filmografia Além da Atuação (Diretor / Produtor)</h3>
+            <p class="section-subtitle">Obras icônicas dos bastidores com a participação de Tom Hanks</p>
+            <div class="movie-grid">
+              @for (pm of premiumMovies(); track pm.tmdb_movie_id) {
+                <article class="movie-card movie-card--premium">
+                  <div class="movie-poster-wrap">
+                    <img [src]="pm.poster_url || posterFallback" [alt]="pm.title" loading="lazy" />
+                    <span class="premium-job-badge">{{ pm.job || 'Produção' }}</span>
+                  </div>
+                  <div class="movie-info">
+                    <span class="movie-year">{{ pm.release_date || 'Ano não informado' }}</span>
+                    <h4 class="movie-title">{{ pm.title }}</h4>
+                    <p class="movie-overview">{{ pm.overview }}</p>
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    }
+
+    <!-- TAB 3: ADMIN & OPERATIONS PANEL -->
+    @if (activeTab() === 'admin' && user()?.role === 'admin') {
+      <div class="content-container admin-container">
+        <div class="admin-topbar">
+          <h2>Painel de Operação & Observabilidade</h2>
+          <button type="button" class="btn-ghost-sm" (click)="loadInfraDashboard()" [disabled]="infraRefreshing()">
+            {{ infraRefreshing() ? 'Atualizando...' : 'Atualizar Estado' }}
+          </button>
+        </div>
+
+        <!-- 1. Health Checks de Todos os Serviços -->
+        <section class="admin-block" aria-labelledby="health-title">
+          <h3 id="health-title">Status dos Microsserviços (Health Check Ativo)</h3>
+          @if (infraHealth(); as health) {
+            <div class="health-summary" [class.health-summary--degraded]="health.overall !== 'healthy'">
+              Estado geral: <strong>{{ health.overall === 'healthy' ? 'saudável' : 'degradado' }}</strong>
+            </div>
+            <div class="health-cards-grid">
+              @for (svc of health.services; track svc.name) {
+                <div class="health-card" [class.health-card--down]="svc.status !== 'healthy'">
+                  <div class="health-dot" [class.dot-green]="svc.status === 'healthy'" [class.dot-red]="svc.status !== 'healthy'"></div>
+                  <div class="health-meta">
+                    <strong>{{ svc.name }}</strong>
+                    <span class="health-status">
+                      {{ svc.status === 'healthy' ? 'Em operação (200 OK)' : 'Indisponível / Falha' }}
+                      @if (svc.http_status) { · HTTP {{ svc.http_status }} }
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="admin-empty">{{ infraRefreshing() ? 'Consultando healthchecks...' : 'Nenhum healthcheck carregado.' }}</p>
+          }
+        </section>
+
+        <!-- 2. Swagger / OpenAPI Direct Access Links -->
+        <section class="admin-block" aria-labelledby="swagger-title">
+          <h3 id="swagger-title">Acesso Direto à Documentação OpenAPI / Swagger</h3>
+          <div class="swagger-links-grid">
+            @for (sw of swaggerLinks(); track sw.name) {
+              <div class="swagger-chip">
+                <span class="sw-name">{{ sw.name }}</span>
+                <div class="sw-actions">
+                  <a [href]="sw.swagger_ui" target="_blank" rel="noopener noreferrer" class="sw-btn">Swagger UI ↗</a>
+                  <a [href]="sw.openapi_json" target="_blank" rel="noopener noreferrer" class="sw-btn sw-btn--json">JSON</a>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <!-- 3. Redis Streams & Cache Estado -->
+        @if (redisInfo(); as rInfo) {
+          <section class="admin-block" aria-labelledby="redis-title">
+            <h3 id="redis-title">Redis & Streams de Auditoria (log-service)</h3>
+            <div class="redis-metrics-grid">
+              <div class="redis-stat">
+                <span>Versão do Redis</span>
+                <strong>{{ rInfo.version || '7.x' }}</strong>
+              </div>
+              <div class="redis-stat">
+                <span>Memória Utilizada</span>
+                <strong>{{ rInfo.used_memory_human || 'N/D' }}</strong>
+              </div>
+              <div class="redis-stat">
+                <span>Conexões Ativas</span>
+                <strong>{{ rInfo.connected_clients || 0 }}</strong>
+              </div>
+              @for (st of rInfo.streams; track st.stream_key) {
+                <div class="redis-stat redis-stat--stream">
+                  <span>Stream de Auditoria ({{ st.stream_key }})</span>
+                  <strong>{{ st.length !== null ? st.length + ' eventos gravados' : 'Vazio / Erro' }}</strong>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- 4. Logs de Auditoria -->
+        <section class="admin-block" aria-labelledby="logs-title">
+          <div class="admin-section-heading">
+            <div>
+              <h3 id="logs-title">Logs de Auditoria</h3>
+              <p class="admin-section-caption">Últimos eventos registrados pelo log-service.</p>
+            </div>
+            <span class="log-count">{{ adminLogs().length }} eventos</span>
+          </div>
+          @if (adminLogs().length > 0) {
+            <div class="admin-log-table-wrap">
+              <table class="admin-log-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Ação</th>
+                    <th>Usuário</th>
+                    <th>Detalhe</th>
+                    <th>IP</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (log of adminLogs(); track log.event_id) {
+                    <tr>
+                      <td>{{ log.ts_ms | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+                      <td><span class="log-action">{{ log.acao }}</span></td>
+                      <td>{{ log.usuario_id ?? 'sistema' }}</td>
+                      <td>{{ log.detalhe || '—' }}</td>
+                      <td>{{ log.ip || '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="admin-empty">{{ infraRefreshing() ? 'Carregando logs...' : 'Nenhum log de auditoria encontrado.' }}</p>
+          }
+        </section>
+
+        <!-- 5. Gestão de Usuários (RBAC) -->
+        <section class="admin-block" aria-labelledby="rbac-title">
+          <h3 id="rbac-title">Gerenciamento de Papéis de Usuários (RBAC)</h3>
+          <div class="admin-user-table-wrap">
+            <table class="admin-user-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nome</th>
+                  <th>E-mail</th>
+                  <th>Papel</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (u of adminUsers(); track u.id) {
+                  <tr>
+                    <td>#{{ u.id }}</td>
+                    <td>{{ u.nome }}</td>
+                    <td>{{ u.email }}</td>
+                    <td><span class="role-pill" [class.role-admin]="u.role === 'admin'">{{ u.role }}</span></td>
+                    <td>
+                      <button
+                        type="button"
+                        class="btn-ghost-sm"
+                        (click)="changeUserRole(u)"
+                        [disabled]="loading() || u.id === user()?.id"
+                      >
+                        {{ u.role === 'admin' ? 'Rebaixar' : 'Promover a Admin' }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    }
+  }
+</main>

@@ -1,0 +1,38 @@
+html {
+  scrollbar-gutter: stable;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(247, 178, 103, 0.18), transparent 34%),
+    radial-gradient(circle at top right, rgba(121, 204, 171, 0.12), transparent 30%),
+    linear-gradient(180deg, #05070c 0%, #0c1019 45%, #080a10 100%);
+  color: #f5f1e8;
+  font-family:
+    'Inter',
+    'Avenir Next',
+    'Segoe UI',
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
