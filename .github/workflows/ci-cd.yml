@@ -80,16 +80,16 @@ jobs:
       # -----------------------------------------------------------------------
       # 1. Build & Push: App Principal (Tom Hanks Catalog Gateway)
       # -----------------------------------------------------------------------
-      - name: 🏷️ Extrair tags e rótulos para tomhanks-app
+      - name: 🏷️ Extrair tags e rótulos para oficinaos-app
         id: meta-app
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/tomhanks-app
+          images: ghcr.io/${{ github.repository_owner }}/oficinaos-app
           tags: |
             type=raw,value=latest
             type=sha,format=short,prefix=sha-
 
-      - name: 🚀 Build & Push tomhanks-app
+      - name: 🚀 Build & Push oficinaos-app
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -103,16 +103,16 @@ jobs:
       # -----------------------------------------------------------------------
       # 2. Build & Push: Auth Service
       # -----------------------------------------------------------------------
-      - name: 🏷️ Extrair tags e rótulos para tomhanks-auth-service
+      - name: 🏷️ Extrair tags e rótulos para oficinaos-auth-service
         id: meta-auth
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/tomhanks-auth-service
+          images: ghcr.io/${{ github.repository_owner }}/oficinaos-auth-service
           tags: |
             type=raw,value=latest
             type=sha,format=short,prefix=sha-
 
-      - name: 🚀 Build & Push tomhanks-auth-service
+      - name: 🚀 Build & Push oficinaos-auth-service
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -126,16 +126,16 @@ jobs:
       # -----------------------------------------------------------------------
       # 3. Build & Push: Log Service (Auditoria / Redis Streams)
       # -----------------------------------------------------------------------
-      - name: 🏷️ Extrair tags e rótulos para tomhanks-log-service
+      - name: 🏷️ Extrair tags e rótulos para oficinaos-log-service
         id: meta-log
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/tomhanks-log-service
+          images: ghcr.io/${{ github.repository_owner }}/oficinaos-log-service
           tags: |
             type=raw,value=latest
             type=sha,format=short,prefix=sha-
 
-      - name: 🚀 Build & Push tomhanks-log-service
+      - name: 🚀 Build & Push oficinaos-log-service
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -149,16 +149,16 @@ jobs:
       # -----------------------------------------------------------------------
       # 4. Build & Push: Payment Service (Assinaturas Stripe)
       # -----------------------------------------------------------------------
-      - name: 🏷️ Extrair tags e rótulos para tomhanks-payment-service
+      - name: 🏷️ Extrair tags e rótulos para oficinaos-payment-service
         id: meta-payment
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/tomhanks-payment-service
+          images: ghcr.io/${{ github.repository_owner }}/oficinaos-payment-service
           tags: |
             type=raw,value=latest
             type=sha,format=short,prefix=sha-
 
-      - name: 🚀 Build & Push tomhanks-payment-service
+      - name: 🚀 Build & Push oficinaos-payment-service
         uses: docker/build-push-action@v5
         with:
           context: .

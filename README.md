@@ -436,7 +436,7 @@ git push origin main
  │ 📦 Estágio 2: CD (Continuous Delivery)                  │
  │ - Autenticação segura no GitHub Container Registry     │
  │ - Build com Docker Buildx e cache otimizado             │
- │ - Publicação de 3 imagens com tags SHA e latest no GHCR │
+ │ - Publicação de 4 imagens com tags SHA e latest no GHCR │
  └─────────────────────────────────────────────────────────┘
        │ (apenas em push na branch main)
        ▼
@@ -448,7 +448,7 @@ git push origin main
  └─────────────────────────────────────────────────────────┘
 ```
 
-- **Rastreabilidade**: As imagens são publicadas no GHCR sob `ghcr.io/joaovserrano/tomhanks-app`, `ghcr.io/joaovserrano/tomhanks-auth-service` e `ghcr.io/joaovserrano/tomhanks-log-service`, tagueadas com o SHA curto do commit (`sha-<commit>`) e a tag `latest`.
+- **Rastreabilidade**: As imagens são publicadas no GHCR sob `ghcr.io/joaovserrano/oficinaos-app`, `ghcr.io/joaovserrano/oficinaos-auth-service`, `ghcr.io/joaovserrano/oficinaos-log-service` e `ghcr.io/joaovserrano/oficinaos-payment-service`, tagueadas com o SHA curto do commit (`sha-<commit>`) e a tag `latest`.
 - **Deploy com Resiliência**: O webhook do Portainer é acionado com retry automático (`curl --fail --retry 3`). Caso o secret `PORTAINER_WEBHOOK_URL` ainda não tenha sido configurado, o pipeline avisa o desenvolvedor e finaliza sem quebras abruptas.
 - **Smoke Test Automatizado**: Após acionar o webhook, o runner monitora a URL configurada em `DEPLOY_HEALTH_URL` por até 5 minutos com verificações periódicas até confirmar que a aplicação retornou `HTTP 200` com status saudável.
 

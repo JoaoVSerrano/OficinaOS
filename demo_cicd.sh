@@ -49,8 +49,8 @@ echo "=========================================================="
 
 COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
 echo "  📌 Commit SHA atual: $COMMIT_SHA"
-echo "  📌 Tag da imagem no GHCR: ghcr.io/joaovserrano/tomhanks-app:sha-$COMMIT_SHA"
-echo "  📌 Tag latest no GHCR:    ghcr.io/joaovserrano/tomhanks-app:latest"
+echo "  📌 Tag da imagem no GHCR: ghcr.io/joaovserrano/oficinaos-app:sha-$COMMIT_SHA"
+echo "  📌 Tag latest no GHCR:    ghcr.io/joaovserrano/oficinaos-app:latest"
 
 echo ""
 echo "=========================================================="
