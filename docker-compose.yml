@@ -198,6 +198,7 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
       # Stripe — publishable key para o frontend iniciar checkout
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
     depends_on:
@@ -205,6 +206,7 @@ services:
       - payment-service
       - log-service
       - minio
+      - redis
     networks:
       - tomhanks-net
     healthcheck:

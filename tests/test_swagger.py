@@ -74,7 +74,7 @@ class TestSwaggerParity:
 
         assert not missing_in_spec, f'Rotas no Gateway ausentes na documentação OpenAPI: {sorted(missing_in_spec)}'
         assert not missing_in_app, f'Rotas na documentação OpenAPI inexistentes no Gateway: {sorted(missing_in_app)}'
-        assert len(app_routes) == 35
+        assert len(app_routes) == 37
 
     def test_auth_service_swagger_parity(self):
         """O auth-service deve ter 100% de paridade com sua spec OpenAPI."""

@@ -840,6 +840,13 @@ OPENAPI_SPEC: dict[str, Any] = {
                 "responses": {"200": {"description": "URL do portal retornada"}}
             }
         },
+        "/api/payment/price": {
+            "get": {
+                "tags": ["Pagamentos"],
+                "summary": "Detalhes e preço do plano premium",
+                "responses": {"200": {"description": "Detalhes do plano retornados"}}
+            }
+        },
         "/api/payment/webhook": {
             "post": {
                 "tags": ["Pagamentos"],
@@ -866,6 +873,13 @@ OPENAPI_SPEC: dict[str, Any] = {
                 "tags": ["Premium"],
                 "summary": "Insights e estatísticas de carreira",
                 "responses": {"200": {"description": "Insights retornados"}, "402": {"description": "Pagamento necessário"}}
+            }
+        },
+        "/api/premium/videos": {
+            "get": {
+                "tags": ["Premium"],
+                "summary": "Vídeos de bastidores (TMDB)",
+                "responses": {"200": {"description": "Vídeos retornados"}, "402": {"description": "Pagamento necessário"}, "502": {"description": "Falha ao consultar a TMDB"}}
             }
         },
         "/api/admin/infra/health": {

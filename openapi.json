@@ -1174,6 +1174,19 @@
         }
       }
     },
+    "/api/payment/price": {
+      "get": {
+        "tags": [
+          "Pagamentos"
+        ],
+        "summary": "Detalhes e preço do plano premium",
+        "responses": {
+          "200": {
+            "description": "Detalhes do plano retornados"
+          }
+        }
+      }
+    },
     "/api/payment/webhook": {
       "post": {
         "tags": [
@@ -1228,6 +1241,25 @@
           },
           "402": {
             "description": "Pagamento necessário"
+          }
+        }
+      }
+    },
+    "/api/premium/videos": {
+      "get": {
+        "tags": [
+          "Premium"
+        ],
+        "summary": "Vídeos de bastidores (TMDB)",
+        "responses": {
+          "200": {
+            "description": "Vídeos retornados"
+          },
+          "402": {
+            "description": "Pagamento necessário"
+          },
+          "502": {
+            "description": "Falha ao consultar a TMDB"
           }
         }
       }
