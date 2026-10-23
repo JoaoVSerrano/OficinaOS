@@ -19,12 +19,12 @@ def test_auth_health_requires_database_and_minio(monkeypatch):
         response = client.get('/health')
 
     assert response.status_code == 200
-    assert response.get_json() == {
-        'status': 'healthy',
-        'service': 'auth-service',
-        'database': 'connected',
-        'minio': 'connected',
-    }
+    body = response.get_json()
+    assert body['status'] == 'healthy'
+    assert body['service'] == 'auth-service'
+    assert body['dependencies']['database']['status'] == 'connected'
+    assert body['dependencies']['minio']['status'] == 'connected'
+    assert {'version', 'uptime_seconds', 'latency_ms', 'timestamp'} <= body.keys()
 
 
 def test_auth_health_returns_503_when_database_is_down(monkeypatch):
@@ -40,7 +40,9 @@ def test_auth_health_returns_503_when_database_is_down(monkeypatch):
         response = client.get('/health')
 
     assert response.status_code == 503
-    assert response.get_json()['database'] == 'disconnected'
+    body = response.get_json()
+    assert body['status'] == 'unhealthy'
+    assert body['dependencies']['database']['status'] == 'disconnected'
 
 
 def test_log_health_requires_redis(monkeypatch):
@@ -50,11 +52,11 @@ def test_log_health_requires_redis(monkeypatch):
         response = client.get('/health')
 
     assert response.status_code == 200
-    assert response.get_json() == {
-        'status': 'healthy',
-        'service': 'log-service',
-        'redis': 'connected',
-    }
+    body = response.get_json()
+    assert body['status'] == 'healthy'
+    assert body['service'] == 'log-service'
+    assert body['dependencies']['redis']['status'] == 'connected'
+    assert {'version', 'uptime_seconds', 'latency_ms', 'timestamp'} <= body.keys()
 
 
 def test_log_health_returns_503_when_redis_is_down(monkeypatch):
@@ -67,4 +69,6 @@ def test_log_health_returns_503_when_redis_is_down(monkeypatch):
         response = client.get('/health')
 
     assert response.status_code == 503
-    assert response.get_json()['redis'] == 'disconnected'
+    body = response.get_json()
+    assert body['status'] == 'unhealthy'
+    assert body['dependencies']['redis']['status'] == 'disconnected'

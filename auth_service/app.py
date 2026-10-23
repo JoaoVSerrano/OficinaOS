@@ -4,6 +4,7 @@ import os
 import secrets
 import smtplib
 import threading
+import time
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -37,6 +38,7 @@ app.config.update(
 metrics = PrometheusMetrics(app)
 
 AUTH_PORT = int(os.getenv('AUTH_PORT', '3000'))
+START_TIME = time.time()
 
 # Protege a inicialização do banco contra chamadas simultâneas de múltiplos workers
 _init_lock = threading.Lock()
@@ -58,20 +60,32 @@ def log_service_url() -> str:
 def log_event(
     acao: str,
     usuario_id: int | None = None,
-    detalhe: str = '',
+    detalhe: str | dict = '',
 ) -> None:
     """Envia evento de auditoria ao log-service. Nunca propaga erros."""
+    import json as _json
     import requests as _requests
     try:
-        ip = request.headers.get('X-Forwarded-For', request.remote_addr or '')
+        ip = (
+            request.headers.get('X-Real-IP')
+            or request.headers.get('X-Forwarded-For')
+            or request.remote_addr
+            or ''
+        )
         if ip:
             ip = ip.split(',')[0].strip()
+
+        if isinstance(detalhe, dict):
+            detalhe_str = _json.dumps(detalhe, ensure_ascii=False)
+        else:
+            detalhe_str = str(detalhe)
+
         _requests.post(
             f'{log_service_url()}/log',
             json={
                 'usuario_id': usuario_id,
                 'acao': acao,
-                'detalhe': detalhe,
+                'detalhe': detalhe_str,
                 'ip': ip,
             },
             headers={'X-Internal-Token': INTERNAL_TOKEN},
@@ -249,12 +263,15 @@ def ensure_configured_admin() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Documentação Swagger / OpenAPI 3.0 — auth-service
+# Documentação Swagger / OpenAPI 3.0 — auth-service (Restrito à rede interna)
 # ---------------------------------------------------------------------------
 
 @app.get('/api/docs/openapi.json')
 def openapi_json():
     """Retorna a especificação OpenAPI 3.0 do auth-service em JSON."""
+    err = require_internal_token()
+    if err:
+        return err
     from flask import Response
     from auth_service.swagger_spec import get_openapi_json
     return Response(get_openapi_json(), content_type='application/json; charset=utf-8')
@@ -263,6 +280,9 @@ def openapi_json():
 @app.get('/api/docs/openapi.yaml')
 def openapi_yaml():
     """Retorna a especificação OpenAPI 3.0 do auth-service em YAML."""
+    err = require_internal_token()
+    if err:
+        return err
     from flask import Response
     from auth_service.swagger_spec import get_openapi_yaml
     return Response(get_openapi_yaml(), content_type='text/yaml; charset=utf-8')
@@ -271,7 +291,10 @@ def openapi_yaml():
 @app.get('/apidocs')
 @app.get('/docs')
 def swagger_ui():
-    """Renderiza o Swagger UI para o auth-service."""
+    """Renderiza o Swagger UI para o auth-service (Restrito)."""
+    err = require_internal_token()
+    if err:
+        return err
     from flask import Response
     html_content = """<!DOCTYPE html>
 <html lang="pt-BR">
@@ -310,18 +333,23 @@ def swagger_ui():
 
 
 # ---------------------------------------------------------------------------
-# Rotas de saúde & Readiness
+# Health & Readiness (Contrato Padronizado)
 # ---------------------------------------------------------------------------
 
 @app.get('/health')
 def health():
+    t0 = time.monotonic()
     database_ok = False
+    database_err = None
     minio_ok = False
+    minio_err = None
+
     try:
         with session_scope() as db:
             db.execute(select(1))
         database_ok = True
     except Exception as exc:
+        database_err = str(exc)
         app.logger.error('Banco de dados (MariaDB) indisponível em healthcheck: %s', exc)
 
     try:
@@ -330,17 +358,28 @@ def health():
             client.list_buckets()
             minio_ok = True
     except Exception as exc:
+        minio_err = str(exc)
         app.logger.warning('MinIO indisponível em healthcheck (não crítico): %s', exc)
 
-    # O serviço é considerado saudável se o banco estiver OK.
-    # MinIO indisponível é degradado mas não fatal — evita restart loop
-    # quando o MinIO ainda não subiu ou está temporariamente inacessível.
+    latency_ms = round((time.monotonic() - t0) * 1000, 2)
     healthy = database_ok
     payload = {
         'status': 'healthy' if healthy else 'unhealthy',
         'service': 'auth-service',
-        'database': 'connected' if database_ok else 'disconnected',
-        'minio': 'connected' if minio_ok else 'disconnected',
+        'version': '1.0.0',
+        'uptime_seconds': round(time.time() - START_TIME, 1),
+        'latency_ms': latency_ms,
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'dependencies': {
+            'database': {
+                'status': 'connected' if database_ok else 'disconnected',
+                'error': database_err,
+            },
+            'minio': {
+                'status': 'connected' if minio_ok else 'disconnected',
+                'error': minio_err,
+            },
+        }
     }
     return jsonify(payload), 200 if healthy else 503
 
@@ -627,8 +666,8 @@ def upload_user_avatar(target_id: int):
         user.avatar_key = object_key
         db.flush()
         user_dict = serialize_user_dict(user)
-
-    log_event('avatar_atualizado', usuario_id=target_id, detalhe=f'key={object_key} size={file_size}')
+    size_kb = round(file_size / 1024)
+    log_event('avatar_atualizado', usuario_id=target_id, detalhe={'mensagem': f'Avatar atualizado ({size_kb} KB)', 'tamanho_kb': size_kb})
     return jsonify({'ok': True, 'user': user_dict})
 
 

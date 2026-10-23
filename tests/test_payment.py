@@ -59,7 +59,7 @@ class TestPaymentHealth:
         with patch.dict('os.environ', {'STRIPE_SECRET_KEY': ''}, clear=False):
             resp = payment_app.get('/health')
             data = resp.get_json()
-            assert data.get('stripe') in ('configured', 'not_configured')
+            assert data['dependencies']['stripe']['status'] in ('configured', 'not_configured')
 
 
 # ────────────────────────────────────────────────────────────────────────────

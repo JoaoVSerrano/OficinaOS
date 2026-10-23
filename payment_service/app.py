@@ -32,6 +32,9 @@ LOG_SERVICE_URL = os.getenv('LOG_SERVICE_URL', 'http://log-service:4000')
 REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
 CACHE_TTL = int(os.getenv('ENTITLEMENT_CACHE_TTL', '300'))  # 5 minutos
 
+START_TIME = time.time()
+_redis_pool: redis.ConnectionPool | None = None
+
 def json_error(message: str, status: int = 400):
     return jsonify({'error': message}), status
 
@@ -42,7 +45,14 @@ def require_internal_token():
     return None
 
 def get_redis():
-    return redis.from_url(REDIS_URL, decode_responses=True)
+    global _redis_pool
+    if _redis_pool is None:
+        _redis_pool = redis.ConnectionPool.from_url(
+            REDIS_URL,
+            decode_responses=True,
+            max_connections=20,
+        )
+    return redis.Redis(connection_pool=_redis_pool)
 
 def log_event(acao: str, google_id: str | None = None, detalhe: str = '') -> None:
     try:
@@ -78,30 +88,57 @@ def initialize():
 
 @app.get('/health')
 def health():
+    from datetime import datetime, timezone
+    t0 = time.monotonic()
     db_ok = False
+    db_err = None
     redis_ok = False
+    redis_err = None
     stripe_ok = bool(stripe.api_key)
+
     try:
         with session_scope() as db:
             db.execute(select(1))
         db_ok = True
     except Exception as exc:
+        db_err = str(exc)
         app.logger.error('BD indisponível em health: %s', exc)
+
     try:
         r = get_redis()
         r.ping()
         redis_ok = True
     except Exception as exc:
+        redis_err = str(exc)
         app.logger.warning('Redis indisponível em health: %s', exc)
     
+    latency_ms = round((time.monotonic() - t0) * 1000, 2)
     healthy = db_ok
-    return jsonify({
+    status_code = 200 if healthy else 503
+
+    payload = {
         'status': 'healthy' if healthy else 'unhealthy',
         'service': 'payment-service',
-        'database': 'connected' if db_ok else 'disconnected',
-        'redis': 'connected' if redis_ok else 'disconnected',
-        'stripe': 'configured' if stripe_ok else 'not_configured',
-    }), 200 if healthy else 503
+        'version': '1.0.0',
+        'uptime_seconds': round(time.time() - START_TIME, 1),
+        'latency_ms': latency_ms,
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'dependencies': {
+            'database': {
+                'status': 'connected' if db_ok else 'disconnected',
+                'error': db_err,
+            },
+            'redis': {
+                'status': 'connected' if redis_ok else 'disconnected',
+                'error': redis_err,
+            },
+            'stripe': {
+                'status': 'configured' if stripe_ok else 'not_configured',
+                'price_id_configured': bool(STRIPE_PRICE_ID),
+            },
+        }
+    }
+    return jsonify(payload), status_code
 
 def _get_stripe_customer_id(google_id: str) -> str | None:
     with session_scope() as db:
@@ -340,14 +377,75 @@ def _handle_webhook_event(event_type: str, obj: Any) -> None:
     else:
         app.logger.info('Evento webhook não tratado: %s', event_type)
 
+@app.get('/plan-details')
+def get_plan_details():
+    """Retorna detalhes do plano consultando a Stripe com cache Redis."""
+    err = require_internal_token()
+    if err:
+        return err
+
+    price_id = os.getenv('STRIPE_PRICE_ID', '')
+    fallback = {
+        'price_id': price_id,
+        'name': 'Plano Premium',
+        'currency': 'brl',
+        'unit_amount': 990,
+        'formatted_price': 'R$ 9,90',
+        'interval': 'mês',
+    }
+
+    if not price_id or not stripe.api_key:
+        return jsonify(fallback)
+
+    cache_key = f'stripe:price:{price_id}'
+    try:
+        r = get_redis()
+        cached = r.get(cache_key)
+        if cached:
+            return jsonify(json.loads(cached))
+    except Exception:
+        pass
+
+    try:
+        price = stripe.Price.retrieve(price_id)
+        unit_amount = price.unit_amount or 990
+        currency = (price.currency or 'brl').upper()
+        amount_fmt = f"{currency} {unit_amount / 100:.2f}".replace('.', ',') if currency != 'BRL' else f"R$ {unit_amount / 100:.2f}".replace('.', ',')
+        interval = (price.recurring.interval if price.recurring else 'mês')
+        interval_label = 'mês' if interval == 'month' else 'ano' if interval == 'year' else interval
+
+        data = {
+            'price_id': price.id,
+            'name': price.nickname or 'Plano Premium',
+            'currency': price.currency or 'brl',
+            'unit_amount': unit_amount,
+            'formatted_price': amount_fmt,
+            'interval': interval_label,
+        }
+        try:
+            r = get_redis()
+            r.setex(cache_key, 3600, json.dumps(data))
+        except Exception:
+            pass
+        return jsonify(data)
+    except Exception as exc:
+        app.logger.warning('Erro ao buscar Price no Stripe: %s', exc)
+        return jsonify(fallback)
+
 @app.get('/api/docs/openapi.json')
 def get_openapi_json():
+    err = require_internal_token()
+    if err:
+        return err
     from payment_service.swagger_spec import get_openapi_json as _json_fn
     return Response(_json_fn(), content_type='application/json; charset=utf-8')
 
 @app.get('/apidocs')
 @app.get('/docs')
 def apidocs():
+    err = require_internal_token()
+    if err:
+        return err
     return """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
