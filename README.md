@@ -1,17 +1,133 @@
-# Catálogo de Filmes — Tom Hanks 🎬
+# OficinaOS
 
-> Desenvolvido para a disciplina **ISW055 – Introdução à Computação em Nuvem**  
-> Faculdade de Tecnologia de Pompeia (Fatec Pompeia)  
-> Professor: [@siriani](https://github.com/siriani)
+> Sistema de ordens de serviço para oficinas mecânicas pequenas: troca o caderno e o WhatsApp por um histórico organizado de clientes, veículos e serviços.
 
-## 📄 Documento
-
-- [P1 ISW055 — João Serrano (assinado)](docs/P1_ISW055_Joao_Serrano_assinado.pdf)
-- [Documentação reversa (especificação, arquitetura, regras de negócio e modelo de dados)](DOCUMENTACAO.md)
+> Projeto da disciplina **ISW055 — Introdução à Computação em Nuvem** (Fatec Pompeia), Atividade 9. O repositório nasceu como fork com histórico completo do catálogo de filmes ([tomhanks](https://github.com/JoaoVSerrano/tomhanks)). Hoje ele ainda contém o código dos filmes; a troca de domínio é a Atividade 10.
+>
+> **Os valores em R$, horas e quantidades abaixo são estimativas minhas, para raciocinar sobre o negócio. Não vêm de pesquisa ou fonte oficial.**
 
 ---
 
-## ☁️ Classificação SaaS / PaaS / IaaS
+## 1. A dor
+
+**Quem sofre:** o dono de oficina mecânica independente, com 2 a 4 mecânicos, que atende 15 a 25 carros por semana e administra tudo sozinho.
+
+**Quando:** no balcão e no fim do dia. O carro entra, o dono anota num caderno, o cliente manda foto do painel no WhatsApp, o mecânico troca uma peça e ninguém registra. Depois de duas semanas ninguém lembra o que foi feito naquele carro.
+
+**Como resolve hoje:** caderno de capa dura, planilha que só o dono entende e conversas de WhatsApp com fotos soltas. A "memória do dono" faz o resto.
+
+**Quanto custa (estimativas):**
+
+| Prejuízo | Como acontece | Estimativa |
+|---|---|---|
+| Dinheiro | Serviço ou peça feito e não anotado, logo não cobrado | R$ 600 a R$ 1.500 por mês |
+| Dinheiro | Revisão de retorno esquecida: o cliente não volta e o dono não avisa | 3 a 5 retornos perdidos por mês |
+| Tempo | Cliente liga para saber se o carro está pronto | 4 a 6 horas por semana ao telefone |
+| Tempo | Procurar no caderno ou no WhatsApp o que foi feito no carro | 10 a 20 minutos por consulta |
+| Risco | Sem prova do que foi trocado, o dono perde a discussão do "vocês não fizeram isso" | 1 a 2 disputas por mês |
+| Risco | Orçamento mandado por WhatsApp sem resposta clara: o dono executa sem aprovação ou deixa o carro parado | atraso de dias no pátio |
+
+---
+
+## 2. Persona
+
+**Seu Antônio Ferreira, 46 anos**, dono da "Auto Mecânica Ferreira", oficina de bairro numa cidade do interior de São Paulo. Tem 3 mecânicos e atende de 15 a 25 carros por semana. Começou como mecânico, abriu a oficina há 12 anos e entende de carro, mas não gosta de computador.
+
+- **Rotina:** abre a oficina às 7h30, recebe os carros, anota no caderno, passa o serviço para o mecânico, responde WhatsApp entre um carro e outro, faz orçamento de cabeça ou numa planilha e fecha o caixa à noite.
+- **O que tenta fazer:** saber o que está em andamento, o que foi aprovado, o que está pronto e o que falta cobrar. Avisar o cliente sem precisar ligar.
+- **O que atrapalha:** o caderno tem letra de três pessoas; as fotos ficam no celular do mecânico; o cliente pergunta o que foi trocado há seis meses e ele não tem como provar. Já testou um sistema de gestão, achou complicado e voltou ao caderno.
+
+---
+
+## 3. Concorrentes e alternativas
+
+| Alternativa | O que faz bem | O que faz mal |
+|---|---|---|
+| **Caderno e planilha** | É de graça e todo mundo entende | Não tem histórico por veículo; some, rasga ou molha; não avisa de revisão; só um lugar de leitura |
+| **WhatsApp com fotos soltas** | O cliente já usa; é rápido | Informação espalhada em dezenas de conversas; sem status de serviço; sem busca por placa; foto some quando troca de celular |
+| **Sistemas de gestão tradicionais** | Têm fiscal, estoque e financeiro | Caros e complexos para oficina de 3 mecânicos; implantação demorada; o dono desiste e volta ao caderno |
+| **A memória do dono** | Rápida e sem custo | Esquece peças, valores e datas; não escala; some junto com o dono (férias, doença) |
+
+---
+
+## 4. Proposta de valor
+
+**Para o dono de oficina pequena, o OficinaOS é o jeito mais simples de saber, em dois toques, o que foi feito em cada carro, o que o cliente aprovou e o que falta cobrar, sem caderno, sem planilha e sem ligar para ninguém.**
+
+---
+
+## 5. Modelo de receita (Stripe)
+
+| | **Free** | **Pro — R$ 49/mês** |
+|---|---|---|
+| Ordens de serviço por mês | até 20 | ilimitadas |
+| Mecânicos | 1 | vários |
+| Histórico do veículo | últimos 30 dias | completo |
+| Fotos e anexos | limitado | liberado |
+
+- **O que o Free limita:** 20 OS por mês cobrem uma oficina que está testando, mas uma oficina com 15 a 25 carros por semana (60 a 100 por mês) passa do limite na primeira semana. Um mecânico apenas impede que a equipe use o sistema de verdade.
+- **Por que o dono pagaria:** o limite aparece justamente quando o sistema virou hábito. R$ 49/mês custam menos que um único serviço esquecido de cobrar (estimativa de R$ 600+/mês), e o histórico completo do veículo é o que vira argumento na hora da discussão com o cliente.
+- **Stripe:** a assinatura usa o Checkout hospedado da Stripe, no **modo de teste** nesta disciplina. Nenhum cartão real é cobrado e o sistema nunca guarda dados de cartão.
+
+---
+
+## 6. Métricas de sucesso
+
+| Métrica | O que mede | Meta do primeiro mês (meta, não resultado) |
+|---|---|---|
+| Assinantes Pro | Quantas oficinas pagam | 3 |
+| MRR | Receita recorrente mensal | R$ 147 (3 × R$ 49) |
+| Retenção | Oficinas que continuam ativas no mês seguinte | 70% ou mais |
+| OS criadas por oficina ativa | Se o sistema virou hábito | 30 ou mais por mês |
+
+Tudo isso é teste: na disciplina o MRR vem de assinaturas em modo de teste da Stripe.
+
+---
+
+## 7. Lean Canvas
+
+| Bloco | Conteúdo |
+|---|---|
+| **1. Problema** | Serviços e peças não anotados (e não cobrados); histórico do veículo perdido; cliente liga para saber se o carro está pronto; sem prova do que foi trocado. |
+| **2. Segmentos de clientes** | Donos de oficina mecânica independente com 2 a 4 mecânicos e 15 a 25 carros por semana, que hoje usam caderno, planilha e WhatsApp. |
+| **3. Proposta única de valor** | O jeito mais simples de saber, em dois toques, o que foi feito em cada carro, o que o cliente aprovou e o que falta cobrar. |
+| **4. Solução** | 1) Ordem de serviço com status (aberta, orçamento aprovado, em serviço, pronta, entregue). 2) Histórico do veículo com fotos da entrada e peças trocadas. 3) Orçamento aprovado pelo cliente por link. |
+| **5. Canais** | Indicação entre donos de oficina; WhatsApp e grupos de mecânicos; landing page com cadastro gratuito; demonstração presencial em oficinas da região. |
+| **6. Fontes de receita** | Assinatura Pro de R$ 49/mês via Stripe; plano Free como porta de entrada. |
+| **7. Estrutura de custos** | Infra da VM (Proxmox/Docker, custo baixo na disciplina); taxas do Stripe (por cobrança); serviços externos de e-mail; meu tempo de desenvolvimento e suporte. |
+| **8. Métricas-chave** | Assinantes Pro, MRR, retenção, OS criadas por oficina ativa. |
+| **9. Vantagem injusta** | Já existe uma base pronta e testada (login com papéis, auditoria, upload de fotos, assinatura e observabilidade), então o custo de operar é baixo; histórico acumulado do veículo cria dependência saudável (quanto mais OS, mais difícil largar). |
+
+---
+
+## 8. Mapa de reaproveitamento
+
+O que já existe no projeto atual e no que vira no OficinaOS. Conferido contra o código do repositório (serviços `app`, `auth-service`, `log-service`, `payment-service`, Redis, MinIO, Prometheus, Grafana).
+
+| Peça do projeto atual | O que vira no SaaS | Exemplo no OficinaOS |
+|---|---|---|
+| Catálogo de filmes (TMDB), favoritos e comentários | Recurso principal | Ordens de serviço, veículos e clientes |
+| `auth-service` + RBAC (`usuario` e `admin`, `require_role`) | Papéis do negócio | `admin` (dono), `mecanico`, `cliente` |
+| `log-service` (Redis Streams `audit:logs`) | Eventos de negócio | OS aberta, orçamento aprovado, status alterado, veículo entregue |
+| Avatar e perfil (MinIO, `avatar_key` no banco) | Arquivos do domínio | Fotos do veículo na entrada, peças trocadas, comprovantes |
+| `payment-service` + Stripe (Premium, webhook, entitlement no Redis) | Assinatura | Plano Pro da oficina (limites Free × Pro na API) |
+| Painel admin de infraestrutura e logs | Painel do dono | Visão de uso, auditoria da oficina e MRR de teste |
+| MariaDB único com Alembic por serviço | Banco do domínio | Tabelas de oficinas, clientes, veículos, OS, itens, anexos |
+| Swagger/OpenAPI por serviço (extra E1) | Continua valendo | API de OS documentada, com teste de paridade rota × spec |
+| CI/CD com GitHub Actions, GHCR e Portainer (extra E2) | Continua valendo | Deploy a cada push, com smoke test em `/health` |
+| Observabilidade: `/health` real + `/metrics` (`prometheus-flask-exporter`) + Grafana (extra E3) | Continua valendo | Health e métricas dos serviços do domínio |
+
+---
+
+## 9. Arquitetura atual
+
+Gateway Flask + Angular (`app`) como único serviço público, falando por rede Docker interna com `auth-service`, `log-service` e `payment-service`, com Redis, MinIO, Prometheus e Grafana ao lado e MariaDB externo da turma. Diagrama, regras de negócio e modelo de dados em [DOCUMENTACAO.md](DOCUMENTACAO.md). O diagrama novo, do OficinaOS, vem na Atividade 10.
+
+Documento da P1: [P1 ISW055 — João Serrano (assinado)](docs/P1_ISW055_Joao_Serrano_assinado.pdf).
+
+---
+
+## 10. Classificação SaaS / PaaS / IaaS (Atividade 8)
 
 | Peça | Camada | Por quê |
 |---|---|---|
@@ -32,7 +148,11 @@
 
 ---
 
-## 📌 Visão Geral do Projeto
+## 11. Operação e infraestrutura
+
+> Conteúdo técnico herdado do projeto dos filmes (Atividades 1 a 8 e extras). Continua válido para subir a stack; nomes como `tomhanks-net` e variáveis `TMDB_*` serão trocados na Atividade 10. O Portainer ainda aponta para o repositório antigo até essa atividade.
+
+### 📌 Visão Geral do Projeto
 
 O **Catálogo de Filmes do Tom Hanks** é uma aplicação completa baseada em arquitetura de microsserviços distribuídos em containers Docker, projetada para execução tanto em ambiente local de desenvolvimento quanto em orquestração de produção via **Portainer**.
 
@@ -40,7 +160,7 @@ A solução integra consumo dinâmico da API da TMDB (The Movie Database), auten
 
 ---
 
-## 🏛️ Arquitetura do Sistema
+### 🏛️ Arquitetura do Sistema
 
 Todos os serviços comunicam-se de forma isolada através de uma rede bridge dedicada `tomhanks-net` com endereçamento CIDR fixo (`10.201.0.0/24`), sem uso de `container_name` para permitir escalabilidade e padronização pelo nome do serviço. O serviço `app` atua como **Gateway da Aplicação** e único ponto de entrada para o tráfego do usuário.
 
@@ -92,7 +212,7 @@ flowchart TD
 
 ---
 
-## 🔌 Tabela de Serviços e Portas
+### 🔌 Tabela de Serviços e Portas
 
 | Serviço | Container / Imagem | Porta Interna | Porta Publicada no Host | Exposição Pública | Finalidade |
 |---|---|---|---|---|---|
@@ -108,19 +228,19 @@ flowchart TD
 
 ---
 
-## 🚀 Como Executar
+### 🚀 Como Executar
 
-### 1. Execução Local via Docker Compose
+#### 1. Execução Local via Docker Compose
 
-#### Pré-requisitos
+##### Pré-requisitos
 - Docker Engine e Docker Compose instalados.
 - Conectividade com a internet (para download de imagens e acesso ao MariaDB remoto).
 
-#### Passo a passo
+##### Passo a passo
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/JoaoVSerrano/tomhanks.git
-   cd tomhanks
+   git clone https://github.com/JoaoVSerrano/OficinaOS.git
+   cd OficinaOS
    ```
 2. Crie o arquivo `.env` a partir do modelo de exemplo:
    ```bash
@@ -139,13 +259,13 @@ flowchart TD
 
 ---
 
-### 2. Deploy no Portainer
+#### 2. Deploy no Portainer
 
 No Portainer, a stack é criada diretamente a partir do repositório Git ou colando o arquivo `docker-compose.yml`. Como o arquivo `.env` está no `.gitignore` por segurança e não existe dentro do container do Portainer, **todas as variáveis obrigatórias devem ser declaradas no painel da stack**:
 
 1. Acesse o **Portainer** → **Stacks** → **Add stack**.
 2. Defina o nome da stack (ex: `tomhanks`).
-3. Em **Build method**, selecione **Repository** e informe a URL do repositório: `https://github.com/JoaoVSerrano/tomhanks.git` (branch `main`).
+3. Em **Build method**, selecione **Repository** e informe a URL do repositório: `https://github.com/JoaoVSerrano/OficinaOS.git` (branch `main`).
 4. Na seção **Environment variables**, clique em **Add environment variable** (ou use a opção *Advanced mode*) e adicione todas as variáveis obrigatórias listadas na tabela abaixo.
 5. Em **Automatic updates**, ative o **Webhook** para obter a URL do webhook de atualização contínua utilizada pelo GitHub Actions.
 6. Clique em **Deploy the stack**.
@@ -155,7 +275,7 @@ No Portainer, a stack é criada diretamente a partir do repositório Git ou cola
 
 ---
 
-## 🔐 Variáveis de Ambiente
+### 🔐 Variáveis de Ambiente
 
 | Variável | Obrigatoriedade | Descrição / Exemplo Seguro |
 |---|:---:|---|
@@ -198,19 +318,19 @@ No Portainer, a stack é criada diretamente a partir do repositório Git ou cola
 
 ---
 
-## 📚 Atividades Realizadas
+### 📚 Atividades Realizadas
 
-### Atividade 1 — Containerização da Aplicação
+#### Atividade 1 — Containerização da Aplicação
 Containerização inicial do catálogo de filmes utilizando Dockerfile multi-stage, garantindo ambiente desacoplado e build reprodutivo do backend Python e frontend web.
 
 ---
 
-### Atividade 2 — Persistência Relacional
+#### Atividade 2 — Persistência Relacional
 Migração da camada de dados para um banco de dados relacional MariaDB externo com gerenciamento de esquema via **Alembic**, tabelas de filmes favoritos (`favorites`) e comentários (`comments`), com suporte a migrações idempotentes e integridade referencial.
 
 ---
 
-### Atividade 3 — Microsserviço de Login Desacoplado
+#### Atividade 3 — Microsserviço de Login Desacoplado
 Extração de toda a responsabilidade de autenticação, sessão de usuário e recuperação de conta do catálogo principal para um microsserviço independente (`auth-service`):
 - **Isolamento de Rede**: O container roda exclusivamente na rede interna `tomhanks-net`, sem nenhuma porta exposta diretamente no host.
 - **Proxy Transparente**: O gateway (`app`) expõe rotas `/api/auth/*` e repassa as requisições via HTTP interno com encaminhamento íntegro de cabeçalhos de cookies `Set-Cookie`.
@@ -219,9 +339,9 @@ Extração de toda a responsabilidade de autenticação, sessão de usuário e r
 
 ---
 
-### Atividade 4 — Controle de Acesso por Papel (RBAC)
+#### Atividade 4 — Controle de Acesso por Papel (RBAC)
 
-#### Permissões por Papel
+##### Permissões por Papel
 | Ação | `usuario` | `admin` |
 |---|:---:|:---:|
 | Visualizar catálogo e detalhes | ✅ | ✅ |
@@ -233,18 +353,18 @@ Extração de toda a responsabilidade de autenticação, sessão de usuário e r
 | **Alterar papéis de usuários (`usuario` ↔ `admin`)** | ❌ (403) | ✅ |
 | **Consultar logs de auditoria no Redis Streams** | ❌ (403) | ✅ |
 
-#### Ação Exclusiva de Admin
+##### Ação Exclusiva de Admin
 Moderação de comentários: um `admin` pode remover comentários de qualquer usuário chamando `DELETE /api/comments/<id>`. Um usuário comum tentando remover o comentário de outro usuário recebe `HTTP 403 Forbidden`. O controle ocorre estritamente no servidor (backend) em duas camadas (`backend/app.py` e `auth_service/app.py`), garantindo que chamadas diretas via curl/Postman não consigam burlar as regras.
 
-#### Trade-off: Padrão A vs Padrão B
+##### Trade-off: Padrão A vs Padrão B
 - **Padrão A (Enforcement Centralizado — Adotado)**: A cada requisição sensível, o gateway consulta a rota `/me` no `auth-service` em tempo real. A decisão de acesso reflete instantaneamente o estado atual do banco de dados (ex: revogação imediata de permissão de admin sem necessidade de deslogar o usuário).
 - **Padrão B (Claims no Token JWT)**: Embutiria a role no payload assinado do JWT no login. Evitaria chamadas adicionais de rede, porém criaria o problema de propagação: a mudança de perfil só teria efeito após a expiração e renovação do token.
 
 ---
 
-### Atividade 5 — Logs e Auditoria com Redis Streams
+#### Atividade 5 — Logs e Auditoria com Redis Streams
 
-#### Por que um microsserviço dedicado e por que Redis Streams?
+##### Por que um microsserviço dedicado e por que Redis Streams?
 Logs de auditoria possuem padrão de uso completamente divergente dos dados transacionais de negócio: **volume massivo de escrita sequencial, leitura pontual/analítica e nenhuma necessidade de transações relacionais complexas**. Persistir esses eventos no MariaDB geraria contenção desnecessária de I/O de disco.
 
 O **Redis Streams** foi escolhido pelas seguintes vantagens:
@@ -253,28 +373,28 @@ O **Redis Streams** foi escolhido pelas seguintes vantagens:
 - Descarte automático de logs antigos com `MAXLEN ~ 10000` para retenção controlada sem risco de exaustão de memória.
 - Persistência em disco via AOF (`--appendonly yes`) montada em volume Docker (`redis-data`).
 
-#### Eventos Auditados
+##### Eventos Auditados
 `login`, `login_falhou`, `logout`, `favoritar`, `desfavoritar`, `comentar`, `apagar_comentario`, `moderacao_apagar_comentario`, `403_apagar_comentario`, `403_acesso_logs`, `403_editar_perfil`, `403_upload_avatar`, `avatar_atualizado`.
 
 ---
 
-### Atividade 6 — Upload e Perfil de Usuário com Object Storage (MinIO)
+#### Atividade 6 — Upload e Perfil de Usuário com Object Storage (MinIO)
 
-#### Por que a imagem de perfil não fica no MariaDB?
+##### Por que a imagem de perfil não fica no MariaDB?
 Arquivos binários (imagens PNG/JPEG) gravados em colunas `BLOB` incham os arquivos de banco de dados, degradam a performance do cache de páginas (buffer pool), tornam os backups substancialmente mais lentos e aumentam a complexidade de replicação. O padrão arquitetural de nuvem delega binários para um **Object Storage compatível com S3 (MinIO)**, armazenando no banco relacional apenas o identificador da chave (`avatar_key`).
 
-#### Bucket Público vs URL Pré-assinada (Trade-offs)
+##### Bucket Público vs URL Pré-assinada (Trade-offs)
 - **Bucket com Leitura Pública via Proxy (Adotado)**: Avatares em redes sociais são dados públicos. O acesso simplificado permite caching eficiente em browsers e CDNs sem overhead de CPU para gerar assinaturas criptográficas com expiração a cada renderização.
 - **URLs Pré-assinadas**: Recomendadas para mídias privadas (documentos fiscais, exames médicos). Para fotos de perfil públicas, gerariam complexidade de renovação contínua e invalidariam o cache do cliente.
 
-#### Imagem e Portas no Docker
+##### Imagem e Portas no Docker
 O container utiliza a imagem `cgr.dev/chainguard/minio:latest`, com usuário não-root seguro (`user: "0:0"` para permissão no volume existente) e portas 9000 (API S3) e 9001 (Console Web) registradas apenas na diretiva `expose`, mantendo o MinIO totalmente inacessível pela internet externa e visível apenas para os serviços da rede `tomhanks-net`.
 
 ---
 
-## 🌟 Atividades Extras
+### 🌟 Atividades Extras
 
-### Atividade Extra E1 — Documentação Swagger/OpenAPI 3.0 em Múltiplos Serviços
+#### Atividade Extra E1 — Documentação Swagger/OpenAPI 3.0 em Múltiplos Serviços
 
 > Atividade Extra (ISW055) · Professor: [@siriani](https://github.com/siriani)
 
@@ -294,7 +414,7 @@ bash demo_swagger.sh
 
 ---
 
-### Atividade Extra E2 — CI/CD com GitHub Actions, GHCR e Deploy Contínuo no Portainer
+#### Atividade Extra E2 — CI/CD com GitHub Actions, GHCR e Deploy Contínuo no Portainer
 
 > Atividade Extra (ISW055) · Professor: [@siriani](https://github.com/siriani)
 
@@ -334,7 +454,7 @@ git push origin main
 
 ---
 
-### Atividade Extra E3 — Observabilidade (Readiness Real, Métricas Prometheus e Dashboards Grafana)
+#### Atividade Extra E3 — Observabilidade (Readiness Real, Métricas Prometheus e Dashboards Grafana)
 
 > Atividade Extra (ISW055) · Professor: [@siriani](https://github.com/siriani)
 
@@ -350,7 +470,7 @@ bash demo_observability.sh
 
 ---
 
-## 🧪 Suíte de Testes Automatizados
+### 🧪 Suíte de Testes Automatizados
 
 A suíte de testes unitários e de integração conta com **27 testes automatizados** cobrindo segurança, endpoints de API, paridade OpenAPI e observabilidade:
 
@@ -358,7 +478,7 @@ A suíte de testes unitários e de integração conta com **27 testes automatiza
 pytest tests/ -v
 ```
 
-### Arquivos de Teste
+#### Arquivos de Teste
 - `tests/test_security.py`: Valida que `backend/database.py`, `auth_service/database.py`, `backend/app.py` e `auth_service/app.py` falham na inicialização caso variáveis de ambiente obrigatórias não existam.
 - `tests/test_swagger.py`: Garante paridade absoluta (100%) entre as rotas do Flask em cada microsserviço e suas respectivas especificações OpenAPI 3.0.
 - `tests/test_api.py`: Testa endpoints públicos, healthcheck consolidado e renderização do Swagger UI.
@@ -367,7 +487,7 @@ pytest tests/ -v
 
 ---
 
-## 📂 Estrutura do Repositório
+### 📂 Estrutura do Repositório
 
 ```
 tomhanks/
@@ -414,18 +534,18 @@ tomhanks/
 
 ---
 
-## 💳 Pagamentos, Assinatura e Entitlement (Stripe)
+### 💳 Pagamentos, Assinatura e Entitlement (Stripe)
 
-### Princípio da Fonte da Verdade
+#### Princípio da Fonte da Verdade
 A **Stripe é a única fonte da verdade**. O banco de dados local armazena estritamente o vínculo entre o `google_id` do usuário e o `stripe_customer_id` na tabela `stripe_customers`. Nenhum dado de cartão, validade, status de assinatura ou fatura é persistido localmente.
 
-### Ordem de Precedência dos Métodos de Verificação
+#### Ordem de Precedência dos Métodos de Verificação
 O direito à assinatura (entitlement) utiliza uma estratégia em camadas para conciliar alta performance e consistência absoluta:
 1. **Cache de Curta Duração no Redis (`TTL = 300s / 5min`)**: Reduz latência e consultas excessivas à API da Stripe em navegações frequentes.
 2. **Webhooks da Stripe com Invalidação Proativa**: Quando eventos críticos ocorrem (`checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`), o cache Redis do usuário é imediatamente invalidado.
 3. **Consulta Direta à API da Stripe (`stripe.Subscription.list`)**: Caso a chave de cache tenha expirado ou não exista, ou em reconciliações onde o webhook ainda não foi entregue, o serviço consulta diretamente a API da Stripe em tempo real e reabastece o cache.
 
-### Como Testar Webhooks Localmente com Stripe CLI
+#### Como Testar Webhooks Localmente com Stripe CLI
 
 1. Instale o [Stripe CLI](https://stripe.com/docs/stripe-cli):
    ```bash
@@ -453,5 +573,4 @@ O direito à assinatura (entitlement) utiliza uma estratégia em camadas para co
 
 ---
 
-Desenvolvido para a disciplina **ISW055 – Introdução à Computação em Nuvem**  
-Fatec Pompeia · Professor: [@siriani](https://github.com/siriani)
+Disciplina ISW055 — Prof. Allan Siriani — [github.com/siriani](https://github.com/siriani)
