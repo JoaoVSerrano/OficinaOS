@@ -120,6 +120,19 @@ def upgrade_database() -> None:
             conn.execute(text('CREATE UNIQUE INDEX ix_usuarios_google_id ON usuarios (google_id)'))
         except Exception:
             pass
+        # Atividade 10: papéis do negócio e vínculo com a oficina (redundante com a migração 0003)
+        try:
+            conn.execute(text('ALTER TABLE usuarios ADD COLUMN oficina_id INT NULL'))
+        except Exception:
+            pass
+        try:
+            conn.execute(text('CREATE INDEX ix_usuarios_oficina_id ON usuarios (oficina_id)'))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("UPDATE usuarios SET role = 'dono' WHERE role = 'usuario'"))
+        except Exception:
+            pass
 
 
 @contextmanager

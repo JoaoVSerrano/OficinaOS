@@ -40,3 +40,46 @@ def client():
     app.config['TESTING'] = True
     with app.test_client() as c:
         yield c
+
+
+# ---------------------------------------------------------------------------
+# Banco SQLite em memória para testes de rotas (sem MariaDB)
+# ---------------------------------------------------------------------------
+from contextlib import contextmanager  # noqa: E402
+
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+from sqlalchemy.pool import StaticPool  # noqa: E402
+
+
+def make_sqlite_scope(base):
+    """Cria tabelas de `base` num SQLite em memória e devolve (engine, session_scope)."""
+    engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
+    base.metadata.create_all(engine)
+    maker = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+    @contextmanager
+    def scope():
+        s = maker()
+        try:
+            yield s
+            s.commit()
+        except Exception:
+            s.rollback()
+            raise
+        finally:
+            s.close()
+
+    return engine, scope
+
+
+@pytest.fixture
+def auth_client(monkeypatch):
+    from auth_service import app as auth_app
+    from auth_service.database import Base
+    _, scope = make_sqlite_scope(Base)
+    monkeypatch.setattr(auth_app, 'session_scope', scope)
+    monkeypatch.setattr(auth_app, '_schema_ready', True)
+    auth_app.app.config['TESTING'] = True
+    with auth_app.app.test_client() as c:
+        yield c

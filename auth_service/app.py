@@ -16,7 +16,7 @@ from sqlalchemy import delete, select
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from auth_service.database import session_scope, upgrade_database
-from auth_service.models import ResetToken, User
+from auth_service.models import ROLES, ResetToken, User
 
 
 app = Flask(__name__)
@@ -394,7 +394,8 @@ def register():
     nome = str(payload.get('nome', '')).strip()
     email = str(payload.get('email', '')).strip().lower()
     senha = str(payload.get('senha', ''))
-    role = 'usuario'
+    # Papel nunca vem do cliente: cadastro público cria 'dono' sem oficina (onboarding "Crie sua oficina").
+    role = 'dono'
 
     if len(nome) < 2:
         return json_error('Informe um nome válido.')
@@ -486,6 +487,78 @@ def get_user_internal(user_id: int):
 
 
 # ---------------------------------------------------------------------------
+# Endpoints INTERNOS do domínio da oficina (só o gateway chama; exigem X-Internal-Token).
+# O gateway nunca repassa papel/oficina vindos do cliente: ele os decide.
+# ---------------------------------------------------------------------------
+
+@app.post('/internal/register')
+def internal_register():
+    """Cria usuário com papel e oficina definidos pelo gateway e inicia a sessão."""
+    err = require_internal_token()
+    if err:
+        return err
+    payload = request.get_json(silent=True) or {}
+    nome = str(payload.get('nome', '')).strip()
+    email = str(payload.get('email', '')).strip().lower()
+    senha = str(payload.get('senha', ''))
+    role = str(payload.get('role', '')).strip().lower()
+    oficina_id = payload.get('oficina_id')
+
+    if role not in ROLES or role == 'admin':
+        return json_error("Papel inválido. Use 'dono', 'mecanico' ou 'cliente'.")
+    if not isinstance(oficina_id, int) or oficina_id <= 0:
+        return json_error('Oficina inválida.')
+    if len(nome) < 2:
+        return json_error('Informe um nome válido.')
+    if '@' not in email or len(email) < 5:
+        return json_error('Informe um e-mail válido.')
+    if len(senha) < 6:
+        return json_error('A senha precisa ter pelo menos 6 caracteres.')
+
+    with session_scope() as db:
+        if db.scalar(select(User).where(User.email == email)):
+            return json_error('Já existe uma conta com esse e-mail.', 409)
+        user = User(nome=nome, email=email, senha_hash=generate_password_hash(senha), role=role, oficina_id=oficina_id)
+        db.add(user)
+        db.flush()
+        db.refresh(user)
+        session['user_id'] = int(user.id)
+        return jsonify({'user': serialize_user_dict(user)}), 201
+
+
+@app.post('/internal/users/<int:user_id>/oficina')
+def internal_set_oficina(user_id: int):
+    """Vincula um dono sem oficina à oficina recém-criada (onboarding)."""
+    err = require_internal_token()
+    if err:
+        return err
+    oficina_id = (request.get_json(silent=True) or {}).get('oficina_id')
+    if not isinstance(oficina_id, int) or oficina_id <= 0:
+        return json_error('Oficina inválida.')
+    with session_scope() as db:
+        user = db.get(User, user_id)
+        if not user:
+            return json_error('Usuário não encontrado.', 404)
+        if user.role != 'dono' or user.oficina_id is not None:
+            return json_error('Usuário não pode criar uma nova oficina.', 409)
+        user.oficina_id = oficina_id
+        return jsonify({'user': serialize_user_dict(user)})
+
+
+@app.get('/internal/oficinas/<int:oficina_id>/usuarios')
+def internal_oficina_usuarios(oficina_id: int):
+    """Equipe da oficina (dono, mecânicos, clientes), sem dados sensíveis."""
+    err = require_internal_token()
+    if err:
+        return err
+    with session_scope() as db:
+        users = db.scalars(select(User).where(User.oficina_id == oficina_id).order_by(User.id)).all()
+        return jsonify({'usuarios': [
+            {'id': int(u.id), 'nome': u.nome, 'email': u.email, 'role': u.role} for u in users
+        ]})
+
+
+# ---------------------------------------------------------------------------
 # Helpers para Perfil e Object Storage (MinIO)
 # ---------------------------------------------------------------------------
 
@@ -522,6 +595,7 @@ def serialize_user_dict(user: User) -> dict[str, Any]:
         'nome': user.nome,
         'email': user.email,
         'role': user.role,
+        'oficina_id': getattr(user, 'oficina_id', None),
         'bio': getattr(user, 'bio', '') or '',
         'avatar_key': getattr(user, 'avatar_key', None),
         'avatar_url': avatar_url,
@@ -736,8 +810,8 @@ def admin_change_role(target_id: int):
     payload = request.get_json(silent=True) or {}
     new_role = str(payload.get('role', '')).strip().lower()
 
-    if new_role not in ('usuario', 'admin'):
-        return json_error("Role inválida. Use 'usuario' ou 'admin'.")
+    if new_role not in ROLES:
+        return json_error("Role inválida. Use: " + ', '.join(ROLES) + '.')
 
     with session_scope() as db:
         target = db.get(User, target_id)
@@ -1003,7 +1077,7 @@ def google_auth_callback():
                     nome=nome,
                     email=email,
                     senha_hash=None,
-                    role='usuario',
+                    role='dono',
                     google_id=google_id,
                 )
                 db.add(user)

@@ -325,7 +325,7 @@ OPENAPI_SPEC: dict[str, Any] = {
                                 "type": "object",
                                 "required": ["role"],
                                 "properties": {
-                                    "role": {"type": "string", "enum": ["usuario", "admin"]}
+                                    "role": {"type": "string", "enum": ["admin", "dono", "mecanico", "cliente"]}
                                 },
                             }
                         }
@@ -355,6 +355,58 @@ OPENAPI_SPEC: dict[str, Any] = {
                     "200": {"description": "Usuário encontrado"},
                     "403": {"description": "Token interno ausente ou inválido"},
                     "404": {"description": "Usuário não encontrado"},
+                },
+            }
+        },
+        "/internal/register": {
+            "post": {
+                "tags": ["Interno"],
+                "summary": "Cadastro com papel e oficina (chamada interna do gateway)",
+                "security": [{"InternalToken": []}],
+                "requestBody": {"required": True, "content": {"application/json": {"schema": {
+                    "type": "object",
+                    "required": ["nome", "email", "senha", "role", "oficina_id"],
+                    "properties": {
+                        "nome": {"type": "string"}, "email": {"type": "string"}, "senha": {"type": "string"},
+                        "role": {"type": "string", "enum": ["dono", "mecanico", "cliente"]},
+                        "oficina_id": {"type": "integer"},
+                    },
+                }}}},
+                "responses": {
+                    "201": {"description": "Usuário criado e sessão iniciada"},
+                    "400": {"description": "Papel, oficina ou dados inválidos"},
+                    "403": {"description": "Token interno ausente ou inválido"},
+                    "409": {"description": "E-mail já cadastrado"},
+                },
+            }
+        },
+        "/internal/users/{user_id}/oficina": {
+            "post": {
+                "tags": ["Interno"],
+                "summary": "Vincular dono sem oficina à oficina criada (chamada interna)",
+                "security": [{"InternalToken": []}],
+                "parameters": [{"name": "user_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                "requestBody": {"required": True, "content": {"application/json": {"schema": {
+                    "type": "object", "required": ["oficina_id"], "properties": {"oficina_id": {"type": "integer"}},
+                }}}},
+                "responses": {
+                    "200": {"description": "Usuário vinculado"},
+                    "400": {"description": "Oficina inválida"},
+                    "403": {"description": "Token interno ausente ou inválido"},
+                    "404": {"description": "Usuário não encontrado"},
+                    "409": {"description": "Usuário já tem oficina ou não é dono"},
+                },
+            }
+        },
+        "/internal/oficinas/{oficina_id}/usuarios": {
+            "get": {
+                "tags": ["Interno"],
+                "summary": "Equipe da oficina (chamada interna)",
+                "security": [{"InternalToken": []}],
+                "parameters": [{"name": "oficina_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                "responses": {
+                    "200": {"description": "Lista de usuários da oficina (sem dados sensíveis)"},
+                    "403": {"description": "Token interno ausente ou inválido"},
                 },
             }
         },
