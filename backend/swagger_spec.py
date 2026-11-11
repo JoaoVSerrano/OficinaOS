@@ -6,14 +6,15 @@ from typing import Any
 OPENAPI_SPEC: dict[str, Any] = {
     "openapi": "3.0.3",
     "info": {
-        "title": "Catálogo Tom Hanks — API Specification",
+        "title": "OficinaOS — API Specification",
         "description": (
-            "Documentação padronizada OpenAPI 3.0 / Swagger UI para a aplicação do Catálogo de Filmes do Tom Hanks.\n\n"
+            "Documentação OpenAPI 3.0 / Swagger UI do OficinaOS (ordens de serviço para oficinas mecânicas).\n\n"
             "Inclui todos os microsserviços:\n"
-            "- **Catálogo & Filmes**: Consulta da TMDB, favoritos e comentários\n"
+            "- **Oficina**: cadastro, convite, equipe, clientes, veículos, ordens de serviço e anexos (MinIO)\n"
             "- **Autenticação**: Registro, Login, Logout, Sessão e Recuperação de Senha\n"
             "- **Perfil & Upload (MinIO)**: Foto de perfil no Object Storage e Bio\n"
-            "- **Auditoria & Log (Redis Streams)**: Registro e consulta administrativa de logs de auditoria\n\n"
+            "- **Planos e Assinatura**: Free e Pro (Stripe, modo de teste)\n"
+            "- **Auditoria & Log (Redis Streams)**: eventos de negócio e consulta por oficina\n\n"
             "Professor: Allan Siriani (ISW055 — Introdução à Computação em Nuvem)"
         ),
         "version": "1.0.0",
@@ -30,11 +31,8 @@ OPENAPI_SPEC: dict[str, Any] = {
     ],
     "tags": [
         {"name": "Health", "description": "Status de saúde da aplicação"},
-        {"name": "Catálogo", "description": "Consulta de filmes do Tom Hanks (integração TMDB)"},
         {"name": "Autenticação", "description": "Gerenciamento de contas, login e sessões"},
         {"name": "Perfil & Upload", "description": "Perfil de usuário, biografia e foto no MinIO Object Storage"},
-        {"name": "Favoritos", "description": "Favoritar e desfavoritar filmes"},
-        {"name": "Comentários", "description": "Criação e remoção de comentários em filmes"},
         {"name": "Administração & Auditoria", "description": "Gestão de papéis e logs de auditoria no Redis Streams"}
     ],
     "paths": {
@@ -74,45 +72,6 @@ OPENAPI_SPEC: dict[str, Any] = {
                         "content": {
                             "application/json": {
                                 "example": {"ok": True}
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/catalog": {
-            "get": {
-                "tags": ["Catálogo"],
-                "summary": "Listar filmes do catálogo com status da conta",
-                "description": "Retorna os filmes de Tom Hanks obtidos da TMDB, marcando os favoritos e comentários do usuário logado.",
-                "responses": {
-                    "200": {
-                        "description": "Lista de filmes do catálogo",
-                        "content": {
-                            "application/json": {
-                                "example": {
-                                    "user_id": 7,
-                                    "movies": [
-                                        {
-                                            "tmdb_movie_id": 13,
-                                            "title": "Forrest Gump: O Contador de Histórias",
-                                            "overview": "A história de um homem simples...",
-                                            "poster_url": "https://image.tmdb.org/t/p/w500/d74WpIsH8379TIL4wUxDneRCYv2.jpg",
-                                            "release_date": "1994-06-23",
-                                            "is_favorite": True,
-                                            "comment_count": 1,
-                                            "comments": [
-                                                {
-                                                    "id": 1,
-                                                    "tmdb_movie_id": 13,
-                                                    "texto": "Filme inesquecível!",
-                                                    "criado_em": "2026-09-30T22:00:00"
-                                                }
-                                            ]
-                                        }
-                                    ],
-                                    "stats": {"favorite_count": 1, "comment_count": 1}
-                                }
                             }
                         }
                     }
@@ -242,8 +201,9 @@ OPENAPI_SPEC: dict[str, Any] = {
                                         "id": 7,
                                         "nome": "Alice Santos",
                                         "email": "alice@exemplo.com",
-                                        "role": "usuario",
-                                        "bio": "Fã de Tom Hanks",
+                                        "role": "dono",
+                                        "oficina_id": 3,
+                                        "bio": "Dono da oficina",
                                         "avatar_url": "/api/profile/avatar/avatar_7_1790809193.png"
                                     }
                                 }
@@ -345,7 +305,7 @@ OPENAPI_SPEC: dict[str, Any] = {
                 ],
                 "responses": {
                     "200": {
-                        "description": "Perfil retornado com sucesso",
+                        "description": "Perfil retornado (só o próprio usuário, admin ou alguém da mesma oficina; senão 404)",
                         "content": {
                             "application/json": {
                                 "example": {
@@ -353,21 +313,13 @@ OPENAPI_SPEC: dict[str, Any] = {
                                         "id": 7,
                                         "nome": "Alice Santos",
                                         "email": "alice@exemplo.com",
-                                        "role": "usuario",
-                                        "bio": "Engenheira Cloud & Entusiasta de cinema.",
+                                        "role": "dono",
+                                        "oficina_id": 3,
+                                        "bio": "Dono da oficina",
                                         "avatar_key": "avatar_7_1790809193.png",
                                         "avatar_url": "/api/profile/avatar/avatar_7_1790809193.png",
                                         "criado_em": "2026-09-30T22:59:51"
-                                    },
-                                    "favorite_count": 1,
-                                    "favorites": [
-                                        {
-                                            "id": 1,
-                                            "tmdb_movie_id": 13,
-                                            "title": "Forrest Gump: O Contador de Histórias",
-                                            "poster_url": "https://image.tmdb.org/t/p/w500/d74WpIsH8379TIL4wUxDneRCYv2.jpg"
-                                        }
-                                    ]
+                                    }
                                 }
                             }
                         }
@@ -515,179 +467,6 @@ OPENAPI_SPEC: dict[str, Any] = {
                     "404": {
                         "description": "Avatar não encontrado no MinIO",
                         "content": {"application/json": {"example": {"error": "Avatar não encontrado."}}}
-                    }
-                }
-            }
-        },
-        "/api/favorites": {
-            "get": {
-                "tags": ["Favoritos"],
-                "summary": "Listar filmes favoritados pelo usuário logado",
-                "responses": {
-                    "200": {
-                        "description": "Lista de filmes favoritos",
-                        "content": {
-                            "application/json": {
-                                "example": {
-                                    "favorites": [
-                                        {"id": 1, "tmdb_movie_id": 13, "titulo": "Forrest Gump"}
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "401": {"description": "Não autenticado"}
-                }
-            },
-            "post": {
-                "tags": ["Favoritos"],
-                "summary": "Favoritar um filme",
-                "requestBody": {
-                    "required": True,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["tmdb_movie_id"],
-                                "properties": {
-                                    "tmdb_movie_id": {"type": "integer", "example": 13},
-                                    "titulo": {"type": "string", "example": "Forrest Gump"}
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Filme favoritado",
-                        "content": {
-                            "application/json": {
-                                "example": {
-                                    "ok": True,
-                                    "favorite": {
-                                        "tmdb_movie_id": 13,
-                                        "title": "Forrest Gump: O Contador de Histórias",
-                                        "poster_url": "https://image.tmdb.org/t/p/w500/d74WpIsH8379TIL4wUxDneRCYv2.jpg"
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Não autenticado",
-                        "content": {"application/json": {"example": {"error": "Faça login para continuar."}}}
-                    }
-                }
-            }
-        },
-        "/api/favorites/{movie_id}": {
-            "delete": {
-                "tags": ["Favoritos"],
-                "summary": "Desfavoritar um filme",
-                "parameters": [
-                    {
-                        "name": "movie_id",
-                        "in": "path",
-                        "required": True,
-                        "schema": {"type": "integer"},
-                        "example": 13
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Filme removido dos favoritos",
-                        "content": {"application/json": {"example": {"ok": True, "removed": True}}}
-                    }
-                }
-            }
-        },
-        "/api/comments": {
-            "get": {
-                "tags": ["Comentários"],
-                "summary": "Listar comentários do usuário ou filtrados por filme",
-                "parameters": [
-                    {
-                        "name": "movie_id",
-                        "in": "query",
-                        "required": False,
-                        "schema": {"type": "integer"},
-                        "description": "ID do filme para filtrar comentários"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Lista de comentários",
-                        "content": {
-                            "application/json": {
-                                "example": {
-                                    "comments": [
-                                        {"id": 1, "tmdb_movie_id": 13, "texto": "Excelente filme!", "criado_em": "2026-09-30T22:00:00"}
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "401": {"description": "Não autenticado"}
-                }
-            },
-            "post": {
-                "tags": ["Comentários"],
-                "summary": "Criar comentário em um filme",
-                "requestBody": {
-                    "required": True,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["tmdb_movie_id", "texto"],
-                                "properties": {
-                                    "tmdb_movie_id": {"type": "integer", "example": 13},
-                                    "texto": {"type": "string", "example": "Excelente filme!"}
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Comentário publicado",
-                        "content": {
-                            "application/json": {
-                                "example": {
-                                    "ok": True,
-                                    "comment": {
-                                        "id": 5,
-                                        "tmdb_movie_id": 13,
-                                        "texto": "Excelente filme!"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/comments/{comment_id}": {
-            "delete": {
-                "tags": ["Comentários"],
-                "summary": "Apagar comentário (Próprio usuário ou Moderação Admin)",
-                "parameters": [
-                    {
-                        "name": "comment_id",
-                        "in": "path",
-                        "required": True,
-                        "schema": {"type": "integer"},
-                        "example": 5
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Comentário removido",
-                        "content": {"application/json": {"example": {"ok": True, "deleted": True}}}
-                    },
-                    "403": {
-                        "description": "Sem permissão para apagar comentário de outro usuário",
-                        "content": {"application/json": {"example": {"error": "Sem permissão para apagar este comentário."}}}
                     }
                 }
             }
@@ -856,30 +635,9 @@ OPENAPI_SPEC: dict[str, Any] = {
         },
         "/api/premium/status": {
             "get": {
-                "tags": ["Premium"],
-                "summary": "Status do usuário premium",
+                "tags": ["Planos e Assinatura"],
+                "summary": "Status da assinatura (a Atividade 11 passa a ler o plano da oficina no banco)",
                 "responses": {"200": {"description": "Status retornado"}}
-            }
-        },
-        "/api/premium/watchlist": {
-            "get": {
-                "tags": ["Premium"],
-                "summary": "Watchlist de filmes dirigida/produzida por Tom Hanks",
-                "responses": {"200": {"description": "Filmes retornados"}, "402": {"description": "Pagamento necessário"}}
-            }
-        },
-        "/api/premium/insights": {
-            "get": {
-                "tags": ["Premium"],
-                "summary": "Insights e estatísticas de carreira",
-                "responses": {"200": {"description": "Insights retornados"}, "402": {"description": "Pagamento necessário"}}
-            }
-        },
-        "/api/premium/videos": {
-            "get": {
-                "tags": ["Premium"],
-                "summary": "Vídeos de bastidores (TMDB)",
-                "responses": {"200": {"description": "Vídeos retornados"}, "402": {"description": "Pagamento necessário"}, "502": {"description": "Falha ao consultar a TMDB"}}
             }
         },
         "/api/admin/infra/health": {
@@ -927,7 +685,7 @@ def get_openapi_yaml() -> str:
         return (
             "openapi: 3.0.3\n"
             "info:\n"
-            "  title: Catálogo Tom Hanks — API Specification\n"
+            "  title: OficinaOS — API Specification\n"
             "  version: 1.0.0\n"
             f"  description: '{OPENAPI_SPEC['info']['description']}'\n"
         )

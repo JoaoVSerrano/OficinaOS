@@ -13,7 +13,7 @@ OPENAPI_SPEC: dict[str, Any] = {
     "info": {
         "title": "auth-service — API",
         "description": (
-            "Documentação OpenAPI 3.0 do microsserviço de autenticação do Catálogo Tom Hanks.\n\n"
+            "Documentação OpenAPI 3.0 do microsserviço de autenticação do OficinaOS.\n\n"
             "Rotas internas (prefixo `/internal/`) requerem o header `X-Internal-Token`.\n"
             "Disciplina ISW055 — Introdução à Computação em Nuvem · Professor: [@siriani](https://github.com/siriani)"
         ),

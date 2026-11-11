@@ -1,6 +1,6 @@
 -- OficinaOS: esquema do domínio (gerado por scripts/export_sql.sh; não edite à mão).
 -- Equivale às revisões Alembic 0001_initial e 0002_dominio_oficina do gateway.
--- Atenção: remove as tabelas antigas do catálogo de filmes (favoritos, comentarios), se existirem.
+-- Atenção: remove as tabelas do domínio antigo (favoritos, comentarios), se existirem.
 CREATE TABLE alembic_version_backend (
     version_num VARCHAR(32) NOT NULL, 
     CONSTRAINT alembic_version_backend_pkc PRIMARY KEY (version_num)

@@ -30,7 +30,7 @@ def test_migracao_cria_tabelas_do_dominio_com_fks():
     assert 'DROP TABLE IF EXISTS comentarios' in sql
 
 
-def test_baseline_nao_cria_tabelas_de_filmes():
+def test_baseline_nao_cria_tabelas_antigas():
     cfg = Config(str(ROOT / 'alembic.ini'))
     buf = io.StringIO()
     with redirect_stdout(buf):

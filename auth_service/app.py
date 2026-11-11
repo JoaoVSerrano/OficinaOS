@@ -175,10 +175,10 @@ def send_reset_email(to_email: str, to_name: str, reset_link: str) -> None:
     smtp_encryption = os.getenv('SMTP_ENCRYPTION', 'starttls').strip().lower()
     smtp_user = os.getenv('SMTP_USER', '')
     smtp_pass = os.getenv('SMTP_PASS', '')
-    from_email = os.getenv('SMTP_FROM', 'noreply@tomhanks.local')
+    from_email = os.getenv('SMTP_FROM', 'noreply@oficinaos.local')
 
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = 'Recuperação de senha — Catálogo Tom Hanks'
+    msg['Subject'] = 'Recuperação de senha — OficinaOS'
     msg['From'] = from_email
     msg['To'] = to_email
 
@@ -193,7 +193,7 @@ def send_reset_email(to_email: str, to_name: str, reset_link: str) -> None:
       <h2 style="color:#1a1a2e">Recuperação de senha</h2>
       <p>Olá, <strong>{to_name}</strong>!</p>
       <p>Recebemos uma solicitação para redefinir a senha da sua conta no
-         <strong>Catálogo Tom Hanks</strong>.</p>
+         <strong>OficinaOS</strong>.</p>
       <p>
         <a href="{reset_link}"
            style="display:inline-block;background:#e94560;color:#fff;padding:12px 24px;
@@ -696,7 +696,7 @@ def upload_user_avatar(target_id: int):
 
     ext = filename.rsplit('.', 1)[-1] if '.' in filename else 'jpg'
     object_key = f'avatar_{target_id}_{int(datetime.now().timestamp())}.{ext}'
-    bucket_name = os.getenv('MINIO_BUCKET_NAME', 'tomhanks-avatars')
+    bucket_name = os.getenv('MINIO_BUCKET_NAME', 'oficinaos-avatars')
 
     client = get_minio_client()
     if not client:

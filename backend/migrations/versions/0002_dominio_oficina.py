@@ -17,7 +17,7 @@ def _ts(name: str) -> sa.Column:
 
 
 def upgrade() -> None:
-    # DESTRUTIVO: remove o domínio antigo (catálogo de filmes). Confirmado pelo dono do repositório.
+    # DESTRUTIVO: remove as tabelas do domínio antigo do projeto (favoritos e comentarios). Confirmado pelo dono do repositório.
     op.execute('DROP TABLE IF EXISTS comentarios')
     op.execute('DROP TABLE IF EXISTS favoritos')
 
@@ -103,4 +103,4 @@ def upgrade() -> None:
 def downgrade() -> None:
     for t in ('anexos_os', 'itens_os', 'ordens_servico', 'veiculos', 'clientes', 'oficinas'):
         op.drop_table(t)
-    # As tabelas de filmes não são recriadas: o histórico está no git.
+    # As tabelas antigas não são recriadas: o histórico está no git.

@@ -1,24 +1,19 @@
 from __future__ import annotations
 
 import os
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import requests
 from flask import Flask, Response, jsonify, request, send_from_directory
 from prometheus_flask_exporter import PrometheusMetrics
-from sqlalchemy import delete, select
+from sqlalchemy import select
 
 from backend.database import session_scope, upgrade_database
-from backend.models import Comment, Favorite
 
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / 'static'
-TMDB_BASE_URL = 'https://api.themoviedb.org/3'
-TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500'
-_LAST_KNOWN_CATALOG: list[dict[str, Any]] = []
 
 app = Flask(__name__)
 _flask_secret = os.getenv('FLASK_SECRET_KEY')
@@ -274,108 +269,6 @@ def json_error(message: str, status: int = 400):
     return jsonify({'error': message}), status
 
 
-# ---------------------------------------------------------------------------
-# TMDB helpers
-# ---------------------------------------------------------------------------
-
-def normalize_poster_path(poster_path: str | None) -> str | None:
-    if not poster_path:
-        return None
-    return poster_path if poster_path.startswith('http') else f'{TMDB_IMAGE_BASE_URL}{poster_path}'
-
-
-def tmdb_request(path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-    api_key = os.getenv('TMDB_API_KEY')
-    if not api_key:
-        raise RuntimeError('TMDB_API_KEY não configurada no servidor.')
-
-    query = {'api_key': api_key, 'language': os.getenv('TMDB_LANGUAGE', 'pt-BR')}
-    if params:
-        query.update(params)
-
-    response = requests.get(f'{TMDB_BASE_URL}{path}', params=query, timeout=20)
-    response.raise_for_status()
-    return response.json()
-
-
-@lru_cache(maxsize=1)
-def get_tom_hanks_person_id() -> int:
-    payload = tmdb_request('/search/person', {'query': 'Tom Hanks'})
-    results = payload.get('results', [])
-    if not results:
-        raise RuntimeError('Tom Hanks não foi encontrado na TMDB.')
-
-    for person in results:
-        if person.get('name', '').strip().lower() == 'tom hanks':
-            return int(person['id'])
-    return int(results[0]['id'])
-
-
-@lru_cache(maxsize=128)
-def get_movie_details(movie_id: int) -> dict[str, Any]:
-    payload = tmdb_request(f'/movie/{movie_id}')
-    return {
-        'tmdb_movie_id': int(payload['id']),
-        'title': payload.get('title') or payload.get('original_title') or 'Título indisponível',
-        'overview': payload.get('overview') or 'Sinopse indisponível.',
-        'poster_path': payload.get('poster_path'),
-        'poster_url': normalize_poster_path(payload.get('poster_path')),
-        'release_date': payload.get('release_date'),
-    }
-
-
-def _catalog_copy(catalog: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [movie.copy() for movie in catalog]
-
-
-@lru_cache(maxsize=1)
-def get_tom_hanks_catalog() -> list[dict[str, Any]]:
-    person_id = get_tom_hanks_person_id()
-    payload = tmdb_request(f'/person/{person_id}/movie_credits')
-    credits = payload.get('cast', [])
-
-    selected = [
-        movie
-        for movie in sorted(
-            credits,
-            key=lambda item: (
-                item.get('release_date') or '0000-00-00',
-                item.get('popularity') or 0,
-            ),
-            reverse=True,
-        )
-        if movie.get('id') and movie.get('media_type', 'movie') == 'movie'
-    ][:24]
-
-    catalog: list[dict[str, Any]] = []
-    seen_ids: set[int] = set()
-    for movie in selected:
-        movie_id = int(movie['id'])
-        if movie_id in seen_ids:
-            continue
-        seen_ids.add(movie_id)
-        try:
-            details = get_movie_details(movie_id)
-        except Exception:
-            details = {
-                'tmdb_movie_id': movie_id,
-                'title': movie.get('title') or movie.get('original_title') or 'Título indisponível',
-                'overview': movie.get('overview') or 'Sinopse indisponível.',
-                'poster_path': movie.get('poster_path'),
-                'poster_url': normalize_poster_path(movie.get('poster_path')),
-                'release_date': movie.get('release_date'),
-            }
-        catalog.append(details)
-
-    global _LAST_KNOWN_CATALOG
-    _LAST_KNOWN_CATALOG = _catalog_copy(catalog)
-    return catalog
-
-
-# ---------------------------------------------------------------------------
-# Sessão local (o user_id fica na cookie do catálogo após login no auth-service)
-# ---------------------------------------------------------------------------
-
 def require_login():
     """Verifica se o usuário está autenticado consultando o auth-service."""
     try:
@@ -412,23 +305,6 @@ def require_role(expected_role: str):
     except requests.RequestException as exc:
         app.logger.error('Auth-service indisponível em require_role: %s', exc)
         return None, json_error('Serviço de autenticação indisponível.', 503)
-
-
-def serialize_movie(movie: dict[str, Any], favorite_ids: set[int], comments: list[dict[str, Any]]):
-    movie_id = int(movie['tmdb_movie_id'])
-    movie_comments = [item for item in comments if item['tmdb_movie_id'] == movie_id]
-    return {
-        'tmdb_movie_id': movie_id,
-        'title': movie['title'],
-        'overview': movie['overview'],
-        'poster_path': movie.get('poster_path'),
-        'poster_url': movie.get('poster_url'),
-        'release_date': movie.get('release_date'),
-        'is_favorite': movie_id in favorite_ids,
-        'comments': movie_comments,
-        'comment_count': len(movie_comments),
-        'favorite': movie_id in favorite_ids,
-    }
 
 
 def ensure_schema() -> None:
@@ -842,7 +718,7 @@ def _check_premium_entitlement() -> tuple[bool, dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# Premium — benefícios verificáveis baseados na TMDB (Tom Hanks ID: 31)
+# Plano e assinatura (a Atividade 11 reescreve esta seção: plano por oficina, lido do banco)
 # ---------------------------------------------------------------------------
 
 @app.get('/api/payment/price')
@@ -856,9 +732,9 @@ def payment_price():
         app.logger.warning('payment-service indisponível em payment_price: %s', exc)
 
     return jsonify({
-        'name': 'Plano Premium',
+        'name': 'Plano Pro',
         'currency': 'brl',
-        'formatted_price': 'R$ 9,90',
+        'formatted_price': 'R$ 49,00',
         'interval': 'mês',
     })
 
@@ -875,275 +751,6 @@ def premium_status():
         'has_premium': has_premium,
         'entitlement': entitlement,
     })
-
-
-@app.get('/api/premium/watchlist')
-def premium_watchlist():
-    """Filmografia por Direção e Produção de Tom Hanks (TMDB combined_credits).
-
-    Retorna 402 se o usuário não possui acesso premium.
-    """
-    user_id, err = require_login()
-    if err:
-        return err
-
-    has_premium, _ = _check_premium_entitlement()
-    if not has_premium:
-        return json_error(
-            'Esta funcionalidade requer assinatura do Plano Premium.',
-            402,
-        )
-
-    try:
-        person_id = get_tom_hanks_person_id()
-        payload = tmdb_request(f'/person/{person_id}/combined_credits')
-        crew_credits = payload.get('crew', [])
-
-        allowed_jobs = {'director', 'executive producer', 'producer'}
-        seen_keys: set[tuple[int, str]] = set()
-        result = []
-
-        for item in sorted(
-            crew_credits,
-            key=lambda m: (m.get('release_date') or m.get('first_air_date') or '0000-00-00', m.get('popularity') or 0),
-            reverse=True,
-        ):
-            item_id = int(item.get('id', 0))
-            job = (item.get('job') or '').strip()
-            if not item_id or job.lower() not in allowed_jobs:
-                continue
-
-            dedup_key = (item_id, job.lower())
-            if dedup_key in seen_keys:
-                continue
-            seen_keys.add(dedup_key)
-
-            release_date = item.get('release_date') or item.get('first_air_date') or ''
-            year = release_date[:4] if len(release_date) >= 4 else 'Ano não informado'
-
-            result.append({
-                'tmdb_movie_id': item_id,
-                'title': item.get('title') or item.get('name') or item.get('original_title') or 'Título indisponível',
-                'overview': item.get('overview') or 'Sinopse indisponível no TMDB.',
-                'poster_path': item.get('poster_path'),
-                'poster_url': normalize_poster_path(item.get('poster_path')),
-                'release_date': release_date,
-                'year': year,
-                'job': job,
-                'department': item.get('department') or 'Produção/Direção',
-                'media_type': item.get('media_type', 'movie'),
-            })
-            if len(result) >= 20:
-                break
-
-        log_event('premium_watchlist', usuario_id=user_id)
-        return jsonify({
-            'title': 'Filmografia por Direção e Produção',
-            'movies': result,
-            'count': len(result),
-            'attribution': 'Fonte: TMDB · Atualizado dinamicamente',
-        })
-    except Exception as exc:
-        app.logger.error('Falha ao buscar filmografia de direção/produção: %s', exc)
-        return json_error('Não foi possível carregar a filmografia da TMDB.', 502)
-
-
-@app.get('/api/premium/insights')
-def premium_insights():
-    """Retorna estatísticas e métricas de carreira calculadas a partir da TMDB.
-
-    Métricas viáveis: quantidade por década e por função, nota média ponderada
-    por vote_count, título mais popular da década, e dados de orçamento/receita.
-    """
-    user_id, err = require_login()
-    if err:
-        return err
-
-    has_premium, _ = _check_premium_entitlement()
-    if not has_premium:
-        return json_error(
-            'Esta funcionalidade requer assinatura do Plano Premium.',
-            402,
-        )
-
-    try:
-        from datetime import datetime
-        person_id = get_tom_hanks_person_id()
-        credits_payload = tmdb_request(f'/person/{person_id}/combined_credits')
-        cast_list = credits_payload.get('cast', [])
-        crew_list = credits_payload.get('crew', [])
-
-        all_items = cast_list + crew_list
-
-        # 1. Menor release_date para calcular dinamicamente os anos de carreira
-        valid_dates = []
-        for c in all_items:
-            d = c.get('release_date') or c.get('first_air_date') or ''
-            if len(d) >= 4 and d[:4].isdigit():
-                valid_dates.append(int(d[:4]))
-
-        start_year = min(valid_dates) if valid_dates else 1980
-        current_year = datetime.now().year
-        career_years = current_year - start_year
-
-        # 2. Títulos por década e por função
-        movies_by_decade: dict[str, int] = {}
-        decade_roles: dict[str, dict[str, int]] = {}
-        decade_top_movie: dict[str, dict[str, Any]] = {}
-
-        # 3. Média ponderada por vote_count (para títulos com mínimo de 100 votos)
-        weighted_vote_sum = 0.0
-        total_votes = 0
-        min_votes_threshold = 100
-
-        seen_title_ids = set()
-
-        for c in cast_list:
-            cid = c.get('id')
-            if not cid or cid in seen_title_ids:
-                continue
-            seen_title_ids.add(cid)
-
-            d = c.get('release_date') or c.get('first_air_date') or ''
-            if len(d) >= 4 and d[:4].isdigit():
-                year = int(d[:4])
-                decade = f'{(year // 10) * 10}s'
-                movies_by_decade[decade] = movies_by_decade.get(decade, 0) + 1
-
-                if decade not in decade_roles:
-                    decade_roles[decade] = {'Ator': 0, 'Diretor': 0, 'Produtor': 0}
-                decade_roles[decade]['Ator'] += 1
-
-                # Título mais popular da década
-                pop = float(c.get('popularity') or 0)
-                curr_top = decade_top_movie.get(decade)
-                if not curr_top or pop > curr_top.get('popularity', 0):
-                    decade_top_movie[decade] = {
-                        'title': c.get('title') or c.get('name') or 'Título indisponível',
-                        'popularity': round(pop, 1),
-                        'year': year,
-                        'poster_url': normalize_poster_path(c.get('poster_path')),
-                    }
-
-            # Média ponderada
-            va = float(c.get('vote_average') or 0)
-            vc = int(c.get('vote_count') or 0)
-            if va > 0 and vc >= min_votes_threshold:
-                weighted_vote_sum += (va * vc)
-                total_votes += vc
-
-        for cr in crew_list:
-            job = (cr.get('job') or '').lower()
-            d = cr.get('release_date') or cr.get('first_air_date') or ''
-            if len(d) >= 4 and d[:4].isdigit():
-                year = int(d[:4])
-                decade = f'{(year // 10) * 10}s'
-                if decade not in decade_roles:
-                    decade_roles[decade] = {'Ator': 0, 'Diretor': 0, 'Produtor': 0}
-                if 'director' in job:
-                    decade_roles[decade]['Diretor'] += 1
-                elif 'producer' in job:
-                    decade_roles[decade]['Produtor'] += 1
-
-        weighted_average = round(weighted_vote_sum / total_votes, 2) if total_votes > 0 else 7.85
-
-        # 4. Amostra de bilheteria e orçamento de clássicos consagrados (com cache Redis individual)
-        # Nota: TMDB frequentemente retorna 0 para revenue/budget, portanto 0 é tratado estritamente como dado indisponível!
-        sample_movie_ids = [13, 857, 8587]  # Forrest Gump, Saving Private Ryan, The Lion King / Cast Away
-        financial_highlights = []
-
-        for mid in sample_movie_ids:
-            try:
-                m_details = tmdb_request(f'/movie/{mid}')
-                raw_rev = m_details.get('revenue') or 0
-                raw_bud = m_details.get('budget') or 0
-
-                revenue_str = f"${raw_rev:,}" if raw_rev > 0 else 'Dado indisponível'
-                budget_str = f"${raw_bud:,}" if raw_bud > 0 else 'Dado indisponível'
-
-                financial_highlights.append({
-                    'title': m_details.get('title') or 'Título',
-                    'year': (m_details.get('release_date') or '')[:4],
-                    'revenue': revenue_str,
-                    'budget': budget_str,
-                    'poster_url': normalize_poster_path(m_details.get('poster_path')),
-                })
-            except Exception:
-                continue
-
-        # Ordenar décadas cronologicamente
-        sorted_decades = {k: movies_by_decade[k] for k in sorted(movies_by_decade.keys())}
-        sorted_roles = {k: decade_roles[k] for k in sorted(decade_roles.keys())}
-
-        current_date_str = datetime.now().strftime('%d/%m/%Y')
-        attribution_text = f"Fonte: TMDB · atualizado em {current_date_str}"
-
-        log_event('premium_insights', usuario_id=user_id)
-        return jsonify({
-            'total_movies': len(seen_title_ids),
-            'career_start_year': start_year,
-            'career_years': career_years,
-            'career_headline': f'Carreira de {career_years}+ anos no cinema e na TV',
-            'movies_by_decade': sorted_decades,
-            'roles_by_decade': sorted_roles,
-            'weighted_average_rating': weighted_average,
-            'min_votes_filter': min_votes_threshold,
-            'top_movie_by_decade': decade_top_movie,
-            'financial_highlights': financial_highlights,
-            'attribution': attribution_text,
-        })
-    except Exception as exc:
-        app.logger.error('Falha ao calcular insights premium: %s', exc)
-        return json_error('Não foi possível calcular os insights analíticos.', 502)
-
-
-@app.get('/api/premium/videos')
-def premium_videos():
-    """Retorna vídeos de bastidores (Behind the Scenes e Featurettes) da TMDB.
-
-    Conforme conformidade, não utiliza a palavra 'exclusivo', pois dados TMDB são públicos.
-    """
-    user_id, err = require_login()
-    if err:
-        return err
-
-    has_premium, _ = _check_premium_entitlement()
-    if not has_premium:
-        return json_error('Funcionalidade disponível no Plano Premium.', 402)
-
-    try:
-        # Busca bastidores dos filmes mais aclamados
-        movies_to_check = [13, 857, 597, 8587]  # Forrest Gump, Saving Private Ryan, etc.
-        videos = []
-        for mid in movies_to_check:
-            try:
-                m_info = tmdb_request(f'/movie/{mid}')
-                m_vids = tmdb_request(f'/movie/{mid}/videos')
-                for v in m_vids.get('results', []):
-                    v_type = v.get('type')
-                    if v_type in ('Behind the Scenes', 'Featurette'):
-                        videos.append({
-                            'movie_title': m_info.get('title'),
-                            'name': v.get('name'),
-                            'type': v_type,
-                            'site': v.get('site'),
-                            'key': v.get('key'),
-                            'url': f"https://www.youtube.com/watch?v={v.get('key')}" if v.get('site') == 'YouTube' else None,
-                        })
-                        if len(videos) >= 6:
-                            break
-            except Exception:
-                continue
-
-        log_event('premium_videos', usuario_id=user_id)
-        return jsonify({
-            'videos': videos,
-            'count': len(videos),
-            'attribution': 'Fonte: TMDB · Conteúdo de bastidores e featurettes oficiais',
-        })
-    except Exception as exc:
-        app.logger.error('Falha ao buscar bastidores da TMDB: %s', exc)
-        return json_error('Não foi possível carregar os vídeos de bastidores.', 502)
 
 
 # ---------------------------------------------------------------------------
@@ -1320,7 +927,7 @@ def admin_infra_swagger_links():
     return jsonify({
         'services': [
             {
-                'name': 'Catálogo (Gateway)',
+                'name': 'OficinaOS (Gateway)',
                 'swagger_ui': f'{base}/apidocs',
                 'openapi_json': f'{base}/api/docs/openapi.json',
             },
@@ -1368,38 +975,25 @@ def payment_openapi_json():
 
 @app.get('/api/profile/<int:user_id>')
 def get_user_profile(user_id: int):
-    """Retorna os dados do perfil do usuário e a lista de filmes favoritados por ele."""
+    """Perfil do usuário. Só o próprio usuário, um admin ou alguém da mesma oficina (dono ↔ equipe) pode ver."""
     try:
-        resp = _forward_to_auth('GET', f'/users/{user_id}')
+        resp = _forward_to_auth('GET', '/me')
         if resp.status_code != 200:
-            return _proxy_auth('GET', f'/users/{user_id}')
-        user_data = resp.json().get('user', {})
+            return json_error('Faça login para continuar.', 401)
+        viewer = resp.json().get('user') or {}
+        alvo_resp = _forward_to_auth('GET', f'/internal/users/{user_id}')
+        if alvo_resp.status_code != 200:
+            return json_error('Usuário não encontrado.', 404)
+        alvo = alvo_resp.json().get('user', {})
     except Exception as exc:
         app.logger.error('Erro ao buscar perfil no auth-service: %s', exc)
         return json_error('Serviço de autenticação indisponível.', 503)
 
-    # Busca os favoritos do usuário no MariaDB local
-    with session_scope() as db:
-        fav_rows = db.scalars(
-            select(Favorite).where(Favorite.usuario_id == user_id).order_by(Favorite.criado_em.desc())
-        ).all()
-        favorites = [
-            {
-                'id': int(f.id),
-                'tmdb_movie_id': int(f.tmdb_movie_id),
-                'title': f.titulo,
-                'poster_path': f.poster_path,
-                'poster_url': normalize_poster_path(f.poster_path),
-                'criado_em': f.criado_em.isoformat() if hasattr(f.criado_em, 'isoformat') else f.criado_em,
-            }
-            for f in fav_rows
-        ]
-
-    return jsonify({
-        'user': user_data,
-        'favorites': favorites,
-        'favorite_count': len(favorites),
-    })
+    mesma_oficina = bool(viewer.get('oficina_id')) and viewer.get('oficina_id') == alvo.get('oficina_id')
+    if viewer.get('id') != alvo.get('id') and viewer.get('role') != 'admin' and not mesma_oficina:
+        # 404 (e não 403) para não revelar que o id existe em outra oficina
+        return json_error('Usuário não encontrado.', 404)
+    return jsonify({'user': alvo})
 
 
 @app.put('/api/profile/<int:user_id>')
@@ -1429,7 +1023,7 @@ def serve_user_avatar(key: str):
     raw_endpoint = os.getenv('MINIO_ENDPOINT', 'minio:9000')
     access_key = os.getenv('MINIO_ACCESS_KEY', '')
     secret_key = os.getenv('MINIO_SECRET_KEY', '')
-    bucket_name = os.getenv('MINIO_BUCKET_NAME', 'tomhanks-avatars')
+    bucket_name = os.getenv('MINIO_BUCKET_NAME', 'oficinaos-avatars')
 
     if not access_key or not secret_key:
         return json_error('Serviço de armazenamento não configurado.', 503)
@@ -1525,7 +1119,7 @@ def swagger_ui():
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Documentação Swagger / OpenAPI — Catálogo Tom Hanks</title>
+  <title>Documentação Swagger / OpenAPI — OficinaOS</title>
   <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css" />
   <style>
     html { box-sizing: border-box; overflow-y: scroll; }
@@ -1543,12 +1137,12 @@ def swagger_ui():
     window.onload = function() {
       const ui = SwaggerUIBundle({
         urls: [
-          { url: "/api/docs/openapi.json", name: "Catálogo (Gateway)" },
+          { url: "/api/docs/openapi.json", name: "OficinaOS (Gateway)" },
           { url: "/api/docs/auth/openapi.json", name: "auth-service" },
           { url: "/api/docs/log/openapi.json", name: "log-service" },
           { url: "/api/docs/payment/openapi.json", name: "payment-service" }
         ],
-        "urls.primaryName": "Catálogo (Gateway)",
+        "urls.primaryName": "OficinaOS (Gateway)",
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
@@ -1570,313 +1164,6 @@ def swagger_ui():
 
 
 # ---------------------------------------------------------------------------
-# Catálogo
-# ---------------------------------------------------------------------------
-
-def load_user_state(db, user_id: int) -> tuple[set[int], list[dict[str, Any]]]:
-    favorite_ids = set(
-        db.scalars(
-            select(Favorite.tmdb_movie_id).where(Favorite.usuario_id == user_id).order_by(Favorite.criado_em.desc())
-        ).all()
-    )
-    comment_rows = db.scalars(
-        select(Comment).where(Comment.usuario_id == user_id).order_by(Comment.criado_em.desc(), Comment.id.desc())
-    ).all()
-    comments = [
-        {
-            'id': int(row.id),
-            'tmdb_movie_id': int(row.tmdb_movie_id),
-            'texto': row.texto,
-            'criado_em': row.criado_em.isoformat() if hasattr(row.criado_em, 'isoformat') else row.criado_em,
-        }
-        for row in comment_rows
-    ]
-    return favorite_ids, comments
-
-
-@app.get('/api/catalog')
-def catalog():
-    user_id, error = require_login()
-    if error:
-        return error
-
-    with session_scope() as db:
-        favorite_ids, comments = load_user_state(db, user_id)
-        try:
-            tmdb_movies = get_tom_hanks_catalog()
-            catalog_warning = None
-        except Exception as exc:
-            if _LAST_KNOWN_CATALOG:
-                tmdb_movies = _catalog_copy(_LAST_KNOWN_CATALOG)
-                catalog_warning = 'A TMDB ficou indisponível; exibindo o último catálogo carregado.'
-                app.logger.warning('Servindo catálogo em cache após falha na TMDB: %s', exc)
-            else:
-                tmdb_movies = []
-                catalog_warning = 'Não foi possível carregar o catálogo da TMDB neste momento.'
-                app.logger.exception('Falha ao carregar catálogo da TMDB.')
-
-        movies = [serialize_movie(movie, favorite_ids, comments) for movie in tmdb_movies]
-        favorites = [movie for movie in movies if movie['is_favorite']]
-        payload = {
-            'user_id': user_id,
-            'movies': movies,
-            'favorites': favorites,
-            'stats': {
-                'favorite_count': len(favorites),
-                'comment_count': len(comments),
-            },
-        }
-        if catalog_warning:
-            payload['warning'] = catalog_warning
-        return jsonify(payload)
-
-
-# ---------------------------------------------------------------------------
-# Favoritos
-# ---------------------------------------------------------------------------
-
-@app.get('/api/favorites')
-def favorites():
-    user_id, error = require_login()
-    if error:
-        return error
-
-    with session_scope() as db:
-        rows = db.scalars(
-            select(Favorite).where(Favorite.usuario_id == user_id).order_by(Favorite.criado_em.desc())
-        ).all()
-        payload = []
-        for row in rows:
-            payload.append(
-                {
-                    'id': int(row.id),
-                    'tmdb_movie_id': int(row.tmdb_movie_id),
-                    'title': row.titulo,
-                    'poster_path': row.poster_path,
-                    'poster_url': normalize_poster_path(row.poster_path),
-                    'criado_em': row.criado_em.isoformat() if hasattr(row.criado_em, 'isoformat') else row.criado_em,
-                }
-            )
-        return jsonify({'favorites': payload})
-
-
-@app.post('/api/favorites')
-def create_favorite():
-    user_id, error = require_login()
-    if error:
-        return error
-
-    if not check_rate_limit(f'fav:{user_id}', max_requests=30, window_seconds=60):
-        return json_error('Muitas operações de favoritos. Por favor, aguarde alguns instantes.', 429)
-
-    payload = request.get_json(silent=True) or {}
-    movie_id = payload.get('tmdb_movie_id')
-    if movie_id is None:
-        return json_error('Informe o filme a favoritar.')
-
-    try:
-        movie_id = int(movie_id)
-    except (TypeError, ValueError):
-        return json_error('tmdb_movie_id inválido.')
-
-    try:
-        movie = get_movie_details(movie_id)
-    except Exception as exc:
-        return json_error(f'Não foi possível carregar o filme da TMDB: {exc}', 502)
-
-    try:
-        with session_scope() as db:
-            favorite = db.scalar(
-                select(Favorite).where(Favorite.usuario_id == user_id, Favorite.tmdb_movie_id == movie_id)
-            )
-            is_new = favorite is None
-            if is_new:
-                favorite = Favorite(
-                    usuario_id=user_id,
-                    tmdb_movie_id=movie_id,
-                    titulo=movie['title'],
-                    poster_path=movie.get('poster_path'),
-                )
-                db.add(favorite)
-                db.flush()
-                # Só grava evento de auditoria quando a ação efetivamente adicionar novo favorito
-                log_event(
-                    'favoritar',
-                    usuario_id=user_id,
-                    detalhe={'movie_id': movie_id, 'title': movie['title'], 'action': 'adicionar'},
-                )
-                status_code = 201
-            else:
-                # Idempotente: favorito já cadastrado, sincroniza detalhes sem duplicar auditoria
-                favorite.titulo = movie['title']
-                favorite.poster_path = movie.get('poster_path')
-                status_code = 200
-
-            return jsonify(
-                {
-                    'ok': True,
-                    'already_favorite': not is_new,
-                    'favorite': {
-                        'tmdb_movie_id': movie_id,
-                        'title': movie['title'],
-                        'poster_path': movie.get('poster_path'),
-                        'poster_url': movie.get('poster_url'),
-                    },
-                }
-            ), status_code
-    except Exception as exc:
-        app.logger.warning('Erro ao processar favorito (possível concorrência): %s', exc)
-        return jsonify({
-            'ok': True,
-            'already_favorite': True,
-            'favorite': {
-                'tmdb_movie_id': movie_id,
-                'title': movie['title'],
-                'poster_path': movie.get('poster_path'),
-                'poster_url': movie.get('poster_url'),
-            },
-        }), 200
-
-
-@app.delete('/api/favorites/<int:movie_id>')
-def delete_favorite(movie_id: int):
-    user_id, error = require_login()
-    if error:
-        return error
-
-    if not check_rate_limit(f'fav:{user_id}', max_requests=30, window_seconds=60):
-        return json_error('Muitas operações de favoritos. Por favor, aguarde alguns instantes.', 429)
-
-    with session_scope() as db:
-        result = db.execute(
-            delete(Favorite).where(Favorite.usuario_id == user_id, Favorite.tmdb_movie_id == movie_id)
-        )
-        deleted = result.rowcount > 0
-        if deleted:
-            log_event(
-                'desfavoritar',
-                usuario_id=user_id,
-                detalhe={'movie_id': movie_id, 'action': 'remover'},
-            )
-        return jsonify({'ok': True, 'deleted': deleted})
-
-
-# ---------------------------------------------------------------------------
-# Comentários
-# ---------------------------------------------------------------------------
-
-@app.get('/api/comments')
-def list_comments():
-    user_id, error = require_login()
-    if error:
-        return error
-
-    movie_id_raw = request.args.get('movie_id')
-    with session_scope() as db:
-        if movie_id_raw:
-            try:
-                movie_id = int(movie_id_raw)
-            except (TypeError, ValueError):
-                return json_error('movie_id inválido.')
-            rows = db.scalars(
-                select(Comment)
-                .where(Comment.usuario_id == user_id, Comment.tmdb_movie_id == movie_id)
-                .order_by(Comment.criado_em.desc(), Comment.id.desc())
-            ).all()
-        else:
-            rows = db.scalars(
-                select(Comment).where(Comment.usuario_id == user_id).order_by(Comment.criado_em.desc(), Comment.id.desc())
-            ).all()
-
-        comments = [
-            {
-                'id': int(row.id),
-                'tmdb_movie_id': int(row.tmdb_movie_id),
-                'texto': row.texto,
-                'criado_em': row.criado_em.isoformat() if hasattr(row.criado_em, 'isoformat') else row.criado_em,
-            }
-            for row in rows
-        ]
-        return jsonify({'comments': comments})
-
-
-@app.post('/api/comments')
-def create_comment():
-    user_id, error = require_login()
-    if error:
-        return error
-
-    payload = request.get_json(silent=True) or {}
-    texto = str(payload.get('texto', '')).strip()
-    movie_id = payload.get('tmdb_movie_id')
-    if movie_id is None:
-        return json_error('Informe o filme comentado.')
-
-    try:
-        movie_id = int(movie_id)
-    except (TypeError, ValueError):
-        return json_error('tmdb_movie_id inválido.')
-
-    if not texto:
-        return json_error('Escreva um comentário antes de salvar.')
-
-    if len(texto) > 4000:
-        return json_error('O comentário é muito longo.')
-
-    with session_scope() as db:
-        comment = Comment(usuario_id=user_id, tmdb_movie_id=movie_id, texto=texto)
-        db.add(comment)
-        db.flush()
-        db.refresh(comment)
-        log_event('comentar', usuario_id=user_id, detalhe={'movie_id': movie_id, 'comment_id': int(comment.id)})
-        return jsonify(
-            {
-                'ok': True,
-                'comment': {
-                    'id': int(comment.id),
-                    'tmdb_movie_id': movie_id,
-                    'texto': texto,
-                },
-            }
-        ), 201
-
-
-@app.delete('/api/comments/<int:comment_id>')
-def delete_comment(comment_id: int):
-    user_id, error = require_login()
-    if error:
-        return error
-
-    # Verifica se o usuário é admin (enforcement no servidor, não no cliente)
-    admin_user, _ = require_role('admin')
-    is_admin = admin_user is not None
-
-    with session_scope() as db:
-        if is_admin:
-            # Admin pode apagar comentários de qualquer usuário (moderação)
-            result = db.execute(delete(Comment).where(Comment.id == comment_id))
-        else:
-            # Usuário comum só pode apagar os próprios comentários
-            result = db.execute(delete(Comment).where(Comment.id == comment_id, Comment.usuario_id == user_id))
-
-        deleted = result.rowcount > 0
-        if not deleted and not is_admin:
-            # Se não deletou nada e não é admin, pode ser que o comentário pertence a outro usuário
-            comment_exists = db.scalar(select(Comment).where(Comment.id == comment_id))
-            if comment_exists:
-                log_event(
-                    '403_apagar_comentario',
-                    usuario_id=user_id,
-                    detalhe={'comment_id': comment_id, 'motivo': 'sem_permissao'},
-                )
-                return json_error('Sem permissão para apagar este comentário.', 403)
-
-        acao = 'moderacao_apagar_comentario' if is_admin else 'apagar_comentario'
-        log_event(acao, usuario_id=user_id, detalhe={'comment_id': comment_id, 'deleted': deleted})
-        return jsonify({'ok': True, 'deleted': deleted})
-
-
-# ---------------------------------------------------------------------------
 # Frontend estático
 # ---------------------------------------------------------------------------
 
@@ -1888,10 +1175,14 @@ app.register_blueprint(dominio_bp)
 app.register_blueprint(ordens_bp)
 
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
+_TODOS_OS_METODOS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+
+
+@app.route('/', defaults={'path': ''}, methods=_TODOS_OS_METODOS)
+@app.route('/<path:path>', methods=_TODOS_OS_METODOS)
 def serve_frontend(path: str):
-    if path.startswith('api/'):
+    # Rota de API inexistente responde 404 em JSON com qualquer método (ex.: as rotas removidas do domínio antigo).
+    if path.startswith('api/') or request.method != 'GET':
         return json_error('Not found', 404)
 
     if path:

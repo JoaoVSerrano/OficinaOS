@@ -8,28 +8,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from .database import Base
 
 
-class Favorite(Base):
-    __tablename__ = 'favoritos'
-    __table_args__ = (UniqueConstraint('usuario_id', 'tmdb_movie_id', name='uniq_usuario_filme'),)
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    usuario_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    tmdb_movie_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    titulo: Mapped[str] = mapped_column(String(255), nullable=False)
-    poster_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    criado_em: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=text('CURRENT_TIMESTAMP'))
-
-
-class Comment(Base):
-    __tablename__ = 'comentarios'
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    usuario_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    tmdb_movie_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    texto: Mapped[str] = mapped_column(Text, nullable=False)
-    criado_em: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=text('CURRENT_TIMESTAMP'))
-
-
 # ---------------------------------------------------------------------------
 # Domínio da oficina (Atividade 10). Tenant = oficina: toda tabela tem oficina_id
 # (direto ou via os_id). usuario_id/mecanico_id referenciam usuarios.id do

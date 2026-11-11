@@ -74,7 +74,7 @@ class TestSwaggerParity:
 
         assert not missing_in_spec, f'Rotas no Gateway ausentes na documentação OpenAPI: {sorted(missing_in_spec)}'
         assert not missing_in_app, f'Rotas na documentação OpenAPI inexistentes no Gateway: {sorted(missing_in_app)}'
-        assert len(app_routes) == 64
+        assert len(app_routes) == 54
 
     def test_auth_service_swagger_parity(self):
         """O auth-service deve ter 100% de paridade com sua spec OpenAPI."""
@@ -111,7 +111,7 @@ class TestSwaggerParity:
         resp = client.get('/apidocs')
         assert resp.status_code == 200
         html = resp.get_data(as_text=True)
-        assert 'Catálogo (Gateway)' in html
+        assert 'OficinaOS (Gateway)' in html
         assert 'auth-service' in html
         assert 'log-service' in html
         assert 'urls.primaryName' in html

@@ -19,7 +19,7 @@ Alternativa (como o sistema faz sozinho ao subir): `alembic -c alembic.ini upgra
 
 ## Atenção
 
-`001_dominio.sql` remove `favoritos` e `comentarios` (catálogo de filmes antigo) se existirem.
+`001_dominio.sql` remove `favoritos` e `comentarios` (domínio antigo do projeto) se existirem.
 As tabelas de usuários (`usuarios`) e de assinaturas (`assinaturas`) pertencem ao auth-service e ao
 payment-service e são criadas pelas migrações deles. `usuario_id`/`mecanico_id` apontam para
 `usuarios.id` sem chave estrangeira, porque os serviços têm migrações independentes.

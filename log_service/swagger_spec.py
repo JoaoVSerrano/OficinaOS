@@ -12,7 +12,7 @@ OPENAPI_SPEC: dict[str, Any] = {
     "info": {
         "title": "log-service — API de Auditoria",
         "description": (
-            "Documentação OpenAPI 3.0 do microsserviço de auditoria do Catálogo Tom Hanks.\n\n"
+            "Documentação OpenAPI 3.0 do microsserviço de auditoria do OficinaOS.\n\n"
             "Todas as rotas requerem o header `X-Internal-Token` — este serviço é **interno**, "
             "não exposto à internet.\n\n"
             "Disciplina ISW055 — Introdução à Computação em Nuvem · Professor: [@siriani](https://github.com/siriani)"
