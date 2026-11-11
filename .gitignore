@@ -10,3 +10,12 @@ frontend/front-tom-hanks/.cache/
 frontend/front-tom-hanks/coverage/
 venv/
 
+
+# Evidências e navegador (Atividades 10/11, P2)
+.env.evidencias
+.evidencias/
+playwright/.auth/
+*.storage-state.json
+frontend/oficinaos-web/node_modules/
+frontend/oficinaos-web/dist/
+frontend/oficinaos-web/.angular/
