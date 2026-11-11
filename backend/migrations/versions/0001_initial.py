@@ -11,42 +11,14 @@ depends_on = None
 
 
 def upgrade() -> None:
-    conn = op.get_bind()
-    inspector = sa.inspect(conn)
-    tables = inspector.get_table_names()
+    """Baseline neutro.
 
-    if 'favoritos' not in tables:
-        op.create_table(
-            'favoritos',
-            sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True),
-            sa.Column('usuario_id', sa.Integer(), nullable=False),
-            sa.Column('tmdb_movie_id', sa.Integer(), nullable=False),
-            sa.Column('titulo', sa.String(length=255), nullable=False),
-            sa.Column('poster_path', sa.String(length=255), nullable=True),
-            sa.Column('criado_em', sa.TIMESTAMP(), server_default=sa.text('CURRENT_TIMESTAMP')),
-            sa.UniqueConstraint('usuario_id', 'tmdb_movie_id', name='uniq_usuario_filme'),
-            mysql_engine='InnoDB',
-            mysql_charset='utf8mb4',
-        )
-    if 'comentarios' not in tables:
-        op.create_table(
-            'comentarios',
-            sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True),
-            sa.Column('usuario_id', sa.Integer(), nullable=False),
-            sa.Column('tmdb_movie_id', sa.Integer(), nullable=False),
-            sa.Column('texto', sa.Text(), nullable=False),
-            sa.Column('criado_em', sa.TIMESTAMP(), server_default=sa.text('CURRENT_TIMESTAMP')),
-            mysql_engine='InnoDB',
-            mysql_charset='utf8mb4',
-        )
+    Esta revisão criava as tabelas do catálogo de filmes (favoritos, comentarios).
+    O domínio mudou para o OficinaOS: o histórico antigo está no git (commit 96b2297).
+    Bancos já na revisão 0001 seguem para 0002_dominio_oficina, que remove essas tabelas;
+    bancos novos não criam mais nada aqui.
+    """
 
 
 def downgrade() -> None:
-    conn = op.get_bind()
-    inspector = sa.inspect(conn)
-    tables = inspector.get_table_names()
-
-    if 'comentarios' in tables:
-        op.drop_table('comentarios')
-    if 'favoritos' in tables:
-        op.drop_table('favoritos')
+    """Nada a desfazer: o baseline não cria tabelas."""
