@@ -1,0 +1,39 @@
+# Override de DESENVOLVIMENTO: sobe um MariaDB local para não tocar o banco da turma.
+# Uso: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+# No .env local use DB_HOST=mariadb, DB_PORT=3306, DB_USER=oficina, DB_PASSWORD=oficina_dev, DB_NAME=oficinaos.
+services:
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: root_dev
+      MARIADB_DATABASE: oficinaos
+      MARIADB_USER: oficina
+      MARIADB_PASSWORD: oficina_dev
+    ports:
+      - "127.0.0.1:3307:3306"   # acesso do host (alembic, mysqldump)
+    volumes:
+      - mariadb-dev-data:/var/lib/mysql
+    networks:
+      - tomhanks-net
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  app:
+    depends_on:
+      mariadb:
+        condition: service_healthy
+  auth-service:
+    depends_on:
+      mariadb:
+        condition: service_healthy
+  payment-service:
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+volumes:
+  mariadb-dev-data:
