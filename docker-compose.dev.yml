@@ -4,6 +4,7 @@
 services:
   mariadb:
     image: mariadb:11
+    mem_limit: 1g
     environment:
       MARIADB_ROOT_PASSWORD: root_dev
       MARIADB_DATABASE: oficinaos
@@ -14,7 +15,7 @@ services:
     volumes:
       - mariadb-dev-data:/var/lib/mysql
     networks:
-      - tomhanks-net
+      - oficinaos-net
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s

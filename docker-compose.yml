@@ -8,7 +8,7 @@ services:
     volumes:
       - redis-data:/data
     networks:
-      - tomhanks-net
+      - oficinaos-net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -16,6 +16,7 @@ services:
       retries: 3
       start_period: 3s
     restart: unless-stopped
+    mem_limit: 1g   # limite de 1 GB de RAM por container (regra da disciplina)
 
   # ─────────────────────────────────────────────────────────────────────────
   # Microsserviço de log e auditoria — Persiste em Redis Streams
@@ -33,7 +34,7 @@ services:
     depends_on:
       - redis
     networks:
-      - tomhanks-net
+      - oficinaos-net
     healthcheck:
       test: ["CMD-SHELL", "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:4000/health\")' || exit 1"]
       interval: 5s
@@ -41,6 +42,7 @@ services:
       retries: 3
       start_period: 5s
     restart: unless-stopped
+    mem_limit: 1g   # limite de 1 GB de RAM por container (regra da disciplina)
 
   # ─────────────────────────────────────────────────────────────────────────
   # MinIO — Object Storage para fotos de perfil (Atividade 6)
@@ -59,7 +61,7 @@ services:
       - "9000"
       - "9001"
     networks:
-      - tomhanks-net
+      - oficinaos-net
     healthcheck:
       test: ["CMD-SHELL", "mc ready local || exit 1"]
       interval: 10s
@@ -67,6 +69,7 @@ services:
       retries: 3
       start_period: 10s
     restart: unless-stopped
+    mem_limit: 1g   # limite de 1 GB de RAM por container (regra da disciplina)
 
   # ─────────────────────────────────────────────────────────────────────────
   # Microsserviço de autenticação
@@ -92,15 +95,15 @@ services:
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?defina MINIO_ACCESS_KEY nas variáveis da stack}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?defina MINIO_SECRET_KEY nas variáveis da stack}
-      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-tomhanks-avatars}
-      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000/tomhanks-avatars}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-oficinaos-avatars}
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000/oficinaos-avatars}
       # SMTP — opcional (sem SMTP, recuperação de senha não envia e-mail)
       SMTP_HOST: ${SMTP_HOST:-sandbox.smtp.mailtrap.io}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_ENCRYPTION: ${SMTP_ENCRYPTION:-starttls}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-noreply@tomhanks.local}
+      SMTP_FROM: ${SMTP_FROM:-noreply@oficinaos.local}
       PASSWORD_RESET_EXPOSE_LINK: ${PASSWORD_RESET_EXPOSE_LINK:-0}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:?defina INTERNAL_TOKEN nas variáveis da stack}
@@ -113,7 +116,7 @@ services:
       - log-service
       - minio
     networks:
-      - tomhanks-net
+      - oficinaos-net
     healthcheck:
       test: ["CMD-SHELL", "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:3000/health\")' || exit 1"]
       interval: 15s
@@ -121,6 +124,7 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
+    mem_limit: 1g   # limite de 1 GB de RAM por container (regra da disciplina)
 
   # ─────────────────────────────────────────────────────────────────────────
   # Microsserviço de pagamentos — Stripe (Assinaturas Premium)
@@ -154,7 +158,7 @@ services:
       - redis
       - log-service
     networks:
-      - tomhanks-net
+      - oficinaos-net
     healthcheck:
       test: ["CMD-SHELL", "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:5000/health\")' || exit 1"]
       interval: 15s
@@ -162,9 +166,10 @@ services:
       retries: 3
       start_period: 30s
     restart: unless-stopped
+    mem_limit: 1g   # limite de 1 GB de RAM por container (regra da disciplina)
 
   # ─────────────────────────────────────────────────────────────────────────
-  # Catálogo de filmes — único ponto de entrada público
+  # OficinaOS (gateway Flask + Angular) — único ponto de entrada público
   # ─────────────────────────────────────────────────────────────────────────
   app:
     build:
@@ -173,8 +178,6 @@ services:
     environment:
       # Segredos obrigatórios — defina na seção *Environment* da stack no Portainer
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:?defina FLASK_SECRET_KEY nas variáveis da stack}
-      TMDB_API_KEY: ${TMDB_API_KEY:-}
-      TMDB_LANGUAGE: ${TMDB_LANGUAGE:-pt-BR}
       # Banco remoto — obrigatório, sem fallback
       DB_HOST: ${DB_HOST:?defina DB_HOST nas variáveis da stack}
       DB_PORT: ${DB_PORT:?defina DB_PORT nas variáveis da stack}
@@ -189,8 +192,10 @@ services:
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?defina MINIO_ACCESS_KEY nas variáveis da stack}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?defina MINIO_SECRET_KEY nas variáveis da stack}
-      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-tomhanks-avatars}
-      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000/tomhanks-avatars}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-oficinaos-avatars}
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000/oficinaos-avatars}
+      # Bucket PRIVADO das fotos das ordens de serviço (sem política de leitura pública)
+      MINIO_ANEXOS_BUCKET: ${MINIO_ANEXOS_BUCKET:-oficinaos-anexos}
       AUTH_SERVICE_URL: http://auth-service:3000
       PAYMENT_SERVICE_URL: http://payment-service:5000
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:?defina INTERNAL_TOKEN nas variáveis da stack}
@@ -208,7 +213,7 @@ services:
       - minio
       - redis
     networks:
-      - tomhanks-net
+      - oficinaos-net
     healthcheck:
       test: ["CMD-SHELL", "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8080/api/health\")' || exit 1"]
       interval: 10s
@@ -216,6 +221,7 @@ services:
       retries: 3
       start_period: 30s
     restart: unless-stopped
+    mem_limit: 1g   # limite de 1 GB de RAM por container (regra da disciplina)
 
   # ─────────────────────────────────────────────────────────────────────────
   # Prometheus — Coleta e armazenamento de métricas (Atividade Observabilidade)
@@ -227,7 +233,7 @@ services:
     ports:
       - "9091:9090"
     networks:
-      - tomhanks-net
+      - oficinaos-net
     healthcheck:
       test: ["CMD-SHELL", "wget --spider --quiet http://localhost:9090/-/ready"]
       interval: 10s
@@ -235,6 +241,7 @@ services:
       retries: 3
       start_period: 10s
     restart: unless-stopped
+    mem_limit: 1g   # limite de 1 GB de RAM por container (regra da disciplina)
 
   # ─────────────────────────────────────────────────────────────────────────
   # Grafana — Visualização e dashboards de observabilidade
@@ -250,7 +257,7 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
     networks:
-      - tomhanks-net
+      - oficinaos-net
     depends_on:
       - prometheus
     healthcheck:
@@ -260,9 +267,10 @@ services:
       retries: 3
       start_period: 10s
     restart: unless-stopped
+    mem_limit: 1g   # limite de 1 GB de RAM por container (regra da disciplina)
 
 networks:
-  tomhanks-net:
+  oficinaos-net:
     driver: bridge
     ipam:
       driver: default
