@@ -5,19 +5,21 @@ Transição inexistente => 409. Transição existente mas sem permissão do pape
 """
 from __future__ import annotations
 
+import os
+import uuid
 from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
 import requests
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 from sqlalchemy import func, select
 
 from backend import escopo, planos
 from backend.database import session_scope
 from backend.dominio import (_core, _ids_veiculos_do_cliente_logado, _json, erro, log_negocio, negar_nao_encontrado,
                              require_roles, resposta_limite)
-from backend.models import Cliente, ItemOS, OrdemServico, Veiculo
+from backend.models import AnexoOS, Cliente, ItemOS, OrdemServico, Veiculo
 
 bp = Blueprint('ordens', __name__)
 
@@ -308,3 +310,160 @@ def alterar_status(os_id: int):
     if destino in EVENTO_POR_DESTINO:
         log_negocio(EVENTO_POR_DESTINO[destino], user, 'os', os_id, detalhe)
     return jsonify({'ordem': resultado})
+
+
+# ---------------------------------------------------------------------------
+# Anexos (fotos e comprovantes) no MinIO
+#
+# Bucket PRIVADO e separado do de avatares (que tem leitura pública): os anexos nunca ganham
+# política de leitura anônima. A leitura passa pela rota do gateway, com checagem de papel e oficina.
+# ---------------------------------------------------------------------------
+
+TAMANHO_MAX_ANEXO = 5 * 1024 * 1024
+_bucket_pronto = False
+
+
+def bucket_anexos() -> str:
+    return os.getenv('MINIO_ANEXOS_BUCKET', 'oficinaos-anexos')
+
+
+def minio_client():
+    from minio import Minio
+    endpoint = os.getenv('MINIO_ENDPOINT', 'minio:9000')
+    endpoint = endpoint.split('://')[-1]
+    return Minio(endpoint, access_key=os.getenv('MINIO_ACCESS_KEY', ''), secret_key=os.getenv('MINIO_SECRET_KEY', ''),
+                 secure=False)
+
+
+def _garantir_bucket(cliente) -> None:
+    """Cria o bucket se faltar. Propositalmente NÃO define política: sem política = sem leitura pública."""
+    global _bucket_pronto
+    if _bucket_pronto:
+        return
+    if not cliente.bucket_exists(bucket_anexos()):
+        cliente.make_bucket(bucket_anexos())
+    _bucket_pronto = True
+
+
+def detectar_imagem(conteudo: bytes) -> tuple[str, str] | None:
+    """Tipo pelo CONTEÚDO (bytes mágicos), nunca pelo nome ou pelo Content-Type enviado."""
+    if conteudo.startswith(b'\x89PNG\r\n\x1a\n'):
+        return 'image/png', 'png'
+    if conteudo.startswith(b'\xff\xd8\xff'):
+        return 'image/jpeg', 'jpg'
+    if conteudo[:4] == b'RIFF' and conteudo[8:12] == b'WEBP':
+        return 'image/webp', 'webp'
+    return None
+
+
+def _anexo_dict(a: AnexoOS) -> dict[str, Any]:
+    return {'id': a.id, 'os_id': a.os_id, 'nome_original': a.nome_original, 'tipo_mime': a.tipo_mime,
+            'tamanho_bytes': a.tamanho_bytes, 'enviado_por': a.enviado_por, 'criado_em': _iso(a.criado_em),
+            'url': f'/api/os/{a.os_id}/anexos/{a.id}/arquivo'}
+
+
+@bp.post('/api/os/<int:os_id>/anexos')
+@require_roles('dono', 'mecanico')
+def enviar_anexo(os_id: int):
+    user = g.user
+    arquivo = request.files.get('arquivo')
+    if not arquivo:
+        return erro("Envie o arquivo no campo 'arquivo' (multipart/form-data).")
+    conteudo = arquivo.read(TAMANHO_MAX_ANEXO + 1)
+    if not conteudo:
+        return erro('O arquivo enviado está vazio.')
+    if len(conteudo) > TAMANHO_MAX_ANEXO:
+        return erro('O arquivo excede o limite de 5 MB.')
+    tipo = detectar_imagem(conteudo)
+    if not tipo:
+        return erro('Formato não aceito. Envie uma imagem PNG, JPEG ou WEBP.')
+    mime, ext = tipo
+
+    with session_scope() as db:
+        os_ = os_visivel(db, user, os_id)
+        if not os_:
+            return negar_nao_encontrado(user, 'os', os_id)
+        if os_.status == 'cancelada':
+            return erro('Ordem de serviço cancelada não aceita anexos.', 409)
+        plano = planos.plano_da_oficina(user['oficina_id'])
+        lim = planos.limite(plano, 'max_anexos_por_os')
+        if lim is not None:
+            usados = int(db.scalar(select(func.count(AnexoOS.id)).where(AnexoOS.os_id == os_id)) or 0)
+            if usados >= lim:
+                return resposta_limite(user, plano, 'max_anexos_por_os', lim, usados, 'anexo')
+        chave = f'os/{user["oficina_id"]}/{os_id}/{uuid.uuid4().hex}.{ext}'
+        nome = (arquivo.filename or f'foto.{ext}').replace('\\', '/').rsplit('/', 1)[-1][:255]
+        try:
+            import io
+            cliente = minio_client()
+            _garantir_bucket(cliente)
+            cliente.put_object(bucket_anexos(), chave, io.BytesIO(conteudo), length=len(conteudo), content_type=mime)
+        except Exception as exc:  # MinIO fora do ar ou mal configurado
+            _core().app.logger.error('Falha ao gravar anexo no MinIO: %s', exc)
+            return erro('Serviço de armazenamento indisponível.', 503)
+        try:
+            anexo = AnexoOS(os_id=os_id, chave_objeto=chave, nome_original=nome, tipo_mime=mime,
+                            tamanho_bytes=len(conteudo), enviado_por=user['id'], criado_em=agora())
+            db.add(anexo)
+            db.flush()
+            resultado = _anexo_dict(anexo)
+        except Exception:
+            try:
+                cliente.remove_object(bucket_anexos(), chave)
+            finally:
+                raise
+    log_negocio('anexo.enviado', user, 'anexo', resultado['id'], {'os_id': os_id, 'tamanho_bytes': len(conteudo)})
+    return jsonify({'anexo': resultado}), 201
+
+
+@bp.get('/api/os/<int:os_id>/anexos')
+@require_roles('dono', 'mecanico', 'cliente')
+def listar_anexos(os_id: int):
+    with session_scope() as db:
+        if not os_visivel(db, g.user, os_id):
+            return negar_nao_encontrado(g.user, 'os', os_id)
+        itens = db.scalars(select(AnexoOS).where(AnexoOS.os_id == os_id).order_by(AnexoOS.id)).all()
+        return jsonify({'anexos': [_anexo_dict(a) for a in itens]})
+
+
+@bp.get('/api/os/<int:os_id>/anexos/<int:anexo_id>/arquivo')
+@require_roles('dono', 'mecanico', 'cliente')
+def baixar_anexo(os_id: int, anexo_id: int):
+    """Entrega o arquivo só a quem pode ver a OS (papel + oficina). O bucket não é público."""
+    with session_scope() as db:
+        os_ = os_visivel(db, g.user, os_id)
+        anexo = db.get(AnexoOS, anexo_id) if os_ else None
+        if not os_ or not anexo or anexo.os_id != os_.id:
+            return negar_nao_encontrado(g.user, 'anexo', anexo_id)
+        chave, mime = anexo.chave_objeto, anexo.tipo_mime
+    try:
+        resp = minio_client().get_object(bucket_anexos(), chave)
+        try:
+            dados = resp.read()
+        finally:
+            resp.close()
+            resp.release_conn()
+    except Exception as exc:
+        _core().app.logger.error('Anexo %s ausente no MinIO: %s', chave, exc)
+        return erro('Arquivo não encontrado no armazenamento.', 404)
+    return Response(dados, content_type=mime, headers={'Cache-Control': 'private, max-age=300',
+                                                       'X-Content-Type-Options': 'nosniff',
+                                                       'Content-Disposition': 'inline'})
+
+
+@bp.delete('/api/os/<int:os_id>/anexos/<int:anexo_id>')
+@require_roles('dono')
+def remover_anexo(os_id: int, anexo_id: int):
+    with session_scope() as db:
+        os_ = os_visivel(db, g.user, os_id)
+        anexo = db.get(AnexoOS, anexo_id) if os_ else None
+        if not os_ or not anexo or anexo.os_id != os_.id:
+            return negar_nao_encontrado(g.user, 'anexo', anexo_id)
+        chave = anexo.chave_objeto
+        db.delete(anexo)
+    try:
+        minio_client().remove_object(bucket_anexos(), chave)
+    except Exception as exc:
+        _core().app.logger.warning('Não foi possível remover %s do MinIO: %s', chave, exc)
+    log_negocio('os.editada', g.user, 'anexo', anexo_id, {'anexo_removido': True, 'os_id': os_id})
+    return jsonify({'ok': True})

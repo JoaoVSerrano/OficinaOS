@@ -117,4 +117,21 @@ PATHS: dict[str, Any] = {
         "Oficina", "Eventos de negócio da minha oficina (quem, papel, recurso e quando)", "dono", "200",
         ("401", "403", "409", "503"), None,
         "Filtros: acao (tipo de evento, ex.: os.), usuario_id, n, cursor. A oficina é sempre a do usuário logado.")},
+    "/api/os/{os_id}/anexos": {
+        "get": _com_id(_op("Ordens de Serviço", "Listar anexos (fotos/comprovantes) da OS",
+                           "dono, mecanico (atribuída), cliente (própria)", "200", ("401", "403", "404", "409")), "os_id"),
+        "post": _com_id({**_op(
+            "Ordens de Serviço", "Enviar foto ou comprovante da OS (PNG, JPEG ou WEBP, até 5 MB; campo 'arquivo')",
+            "dono, mecanico (atribuída)", "201", ("400", "401", "402", "403", "404", "409", "503"),
+            None, "Tipo validado pelo conteúdo. Free: até 3 anexos por OS (402 ao exceder)."),
+            "requestBody": {"required": True, "content": {"multipart/form-data": {"schema": {
+                "type": "object", "properties": {"arquivo": {"type": "string", "format": "binary"}}}}}}}, "os_id"),
+    },
+    "/api/os/{os_id}/anexos/{anexo_id}/arquivo": {"get": {
+        **_op("Ordens de Serviço", "Ler o arquivo do anexo (bucket privado; só quem vê a OS)",
+              "dono, mecanico (atribuída), cliente (própria)", "200", ("401", "403", "404", "409")),
+        "parameters": _id("os_id") + _id("anexo_id")}},
+    "/api/os/{os_id}/anexos/{anexo_id}": {"delete": {
+        **_op("Ordens de Serviço", "Remover anexo", "dono", "200", ("401", "403", "404", "409")),
+        "parameters": _id("os_id") + _id("anexo_id")}},
 }
