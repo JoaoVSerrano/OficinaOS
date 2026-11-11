@@ -1,4 +1,4 @@
-name: CI/CD Pipeline — Catálogo Tom Hanks
+name: CI/CD Pipeline — OficinaOS
 
 on:
   push:
@@ -78,7 +78,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # -----------------------------------------------------------------------
-      # 1. Build & Push: App Principal (Tom Hanks Catalog Gateway)
+      # 1. Build & Push: App Principal (gateway OficinaOS)
       # -----------------------------------------------------------------------
       - name: 🏷️ Extrair tags e rótulos para oficinaos-app
         id: meta-app
