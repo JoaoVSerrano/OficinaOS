@@ -10,7 +10,7 @@ services:
       MARIADB_USER: oficina
       MARIADB_PASSWORD: oficina_dev
     ports:
-      - "127.0.0.1:3307:3306"   # acesso do host (alembic, mysqldump)
+      - "127.0.0.1:3398:3306"   # acesso do host (alembic, mysqldump)
     volumes:
       - mariadb-dev-data:/var/lib/mysql
     networks:
