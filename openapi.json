@@ -43,6 +43,22 @@
     {
       "name": "Administração & Auditoria",
       "description": "Gestão de papéis e logs de auditoria no Redis Streams"
+    },
+    {
+      "name": "Oficina",
+      "description": "Cadastro, oficina, equipe e código de convite"
+    },
+    {
+      "name": "Clientes e Veículos",
+      "description": "Clientes da oficina e seus veículos (escopo por oficina)"
+    },
+    {
+      "name": "Ordens de Serviço",
+      "description": "Ordens de serviço, itens, status e anexos (MinIO)"
+    },
+    {
+      "name": "Planos e Assinatura",
+      "description": "Planos Free/Pro, checkout, portal e webhooks (Stripe, modo de teste)"
     }
   ],
   "paths": {
@@ -1301,6 +1317,1131 @@
             "description": "Links retornados"
           }
         }
+      }
+    },
+    "/api/cadastro": {
+      "post": {
+        "tags": [
+          "Oficina"
+        ],
+        "summary": "Cadastro orquestrado (dono cria a oficina; mecânico/cliente entram por convite)",
+        "description": "Papéis permitidos: público. A permissão é verificada no backend.",
+        "responses": {
+          "201": {
+            "description": "Criado"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "402": {
+            "description": "Limite do plano atingido (codigo=limite_plano)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          },
+          "503": {
+            "description": "Serviço dependente indisponível"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tipo": {
+                    "type": "string"
+                  },
+                  "nome": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "senha": {
+                    "type": "string"
+                  },
+                  "nome_oficina": {
+                    "type": "string"
+                  },
+                  "codigo_convite": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oficinas": {
+      "post": {
+        "tags": [
+          "Oficina"
+        ],
+        "summary": "Criar a oficina (onboarding do dono sem oficina)",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "201": {
+            "description": "Criado"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "503": {
+            "description": "Serviço dependente indisponível"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nome": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oficina": {
+      "get": {
+        "tags": [
+          "Oficina"
+        ],
+        "summary": "Dados da minha oficina e plano (o dono vê o código de convite)",
+        "description": "Papéis permitidos: dono, mecanico, cliente. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        }
+      }
+    },
+    "/api/equipe": {
+      "get": {
+        "tags": [
+          "Oficina"
+        ],
+        "summary": "Equipe da oficina",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          },
+          "503": {
+            "description": "Serviço dependente indisponível"
+          }
+        }
+      }
+    },
+    "/api/clientes": {
+      "get": {
+        "tags": [
+          "Clientes e Veículos"
+        ],
+        "summary": "Listar clientes da oficina",
+        "description": "Papéis permitidos: dono, mecanico (leitura). A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Clientes e Veículos"
+        ],
+        "summary": "Cadastrar cliente",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "201": {
+            "description": "Criado"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nome": {
+                    "type": "string"
+                  },
+                  "telefone": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clientes/{cliente_id}": {
+      "get": {
+        "tags": [
+          "Clientes e Veículos"
+        ],
+        "summary": "Detalhar cliente",
+        "description": "Papéis permitidos: dono, mecanico. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "cliente_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Clientes e Veículos"
+        ],
+        "summary": "Editar cliente",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nome": {
+                    "type": "string"
+                  },
+                  "telefone": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cliente_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Clientes e Veículos"
+        ],
+        "summary": "Remover cliente (sem veículos)",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "cliente_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/veiculos": {
+      "get": {
+        "tags": [
+          "Clientes e Veículos"
+        ],
+        "summary": "Listar veículos (o cliente vê só os próprios)",
+        "description": "Papéis permitidos: dono, mecanico, cliente. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Clientes e Veículos"
+        ],
+        "summary": "Cadastrar veículo",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "201": {
+            "description": "Criado"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cliente_id": {
+                    "type": "integer"
+                  },
+                  "placa": {
+                    "type": "string"
+                  },
+                  "marca": {
+                    "type": "string"
+                  },
+                  "modelo": {
+                    "type": "string"
+                  },
+                  "ano": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/veiculos/{veiculo_id}": {
+      "get": {
+        "tags": [
+          "Clientes e Veículos"
+        ],
+        "summary": "Detalhar veículo",
+        "description": "Papéis permitidos: dono, mecanico, cliente (só os próprios). A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "veiculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Clientes e Veículos"
+        ],
+        "summary": "Editar veículo",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "placa": {
+                    "type": "string"
+                  },
+                  "marca": {
+                    "type": "string"
+                  },
+                  "modelo": {
+                    "type": "string"
+                  },
+                  "ano": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "veiculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Clientes e Veículos"
+        ],
+        "summary": "Remover veículo (sem ordens de serviço)",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "veiculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/os": {
+      "get": {
+        "tags": [
+          "Ordens de Serviço"
+        ],
+        "summary": "Listar OS (dono: todas; mecânico: atribuídas; cliente: dos seus veículos)",
+        "description": "Papéis permitidos: dono, mecanico, cliente. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Ordens de Serviço"
+        ],
+        "summary": "Abrir ordem de serviço",
+        "description": "Papéis permitidos: dono, mecanico. A permissão é verificada no backend. No plano Free: 20 OS por mês (402 ao exceder).",
+        "responses": {
+          "201": {
+            "description": "Criado"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "402": {
+            "description": "Limite do plano atingido (codigo=limite_plano)"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          },
+          "503": {
+            "description": "Serviço dependente indisponível"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "veiculo_id": {
+                    "type": "integer"
+                  },
+                  "descricao": {
+                    "type": "string"
+                  },
+                  "mecanico_id": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/os/{os_id}": {
+      "get": {
+        "tags": [
+          "Ordens de Serviço"
+        ],
+        "summary": "Detalhar OS com itens",
+        "description": "Papéis permitidos: dono, mecanico (atribuída), cliente (própria). A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Ordens de Serviço"
+        ],
+        "summary": "Editar descrição e mecânico da OS",
+        "description": "Papéis permitidos: dono, mecanico (atribuída). A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          },
+          "503": {
+            "description": "Serviço dependente indisponível"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "descricao": {
+                    "type": "string"
+                  },
+                  "mecanico_id": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Ordens de Serviço"
+        ],
+        "summary": "Excluir OS (exclusão lógica; não devolve cota do plano)",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/os/{os_id}/itens": {
+      "post": {
+        "tags": [
+          "Ordens de Serviço"
+        ],
+        "summary": "Adicionar item (serviço ou peça); o total é a soma dos itens",
+        "description": "Papéis permitidos: dono, mecanico (atribuída). A permissão é verificada no backend.",
+        "responses": {
+          "201": {
+            "description": "Criado"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tipo": {
+                    "type": "string"
+                  },
+                  "descricao": {
+                    "type": "string"
+                  },
+                  "quantidade": {
+                    "type": "integer"
+                  },
+                  "valor_unitario_centavos": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/os/{os_id}/itens/{item_id}": {
+      "delete": {
+        "tags": [
+          "Ordens de Serviço"
+        ],
+        "summary": "Remover item da OS",
+        "description": "Papéis permitidos: dono, mecanico (atribuída). A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/os/{os_id}/status": {
+      "post": {
+        "tags": [
+          "Ordens de Serviço"
+        ],
+        "summary": "Mudar o status (aberta → orcamento_aprovado → em_servico → pronta → entregue; cancelada só pelo dono)",
+        "description": "Papéis permitidos: aprovar orçamento: dono, cliente; iniciar/finalizar serviço: dono, mecanico; entregar e cancelar: dono. A permissão é verificada no backend. Transição inválida responde 409.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/auditoria": {
+      "get": {
+        "tags": [
+          "Oficina"
+        ],
+        "summary": "Eventos de negócio da minha oficina (quem, papel, recurso e quando)",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend. Filtros: acao (tipo de evento, ex.: os.), usuario_id, n, cursor. A oficina é sempre a do usuário logado.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          },
+          "503": {
+            "description": "Serviço dependente indisponível"
+          }
+        }
+      }
+    },
+    "/api/os/{os_id}/anexos": {
+      "get": {
+        "tags": [
+          "Ordens de Serviço"
+        ],
+        "summary": "Listar anexos (fotos/comprovantes) da OS",
+        "description": "Papéis permitidos: dono, mecanico (atribuída), cliente (própria). A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Ordens de Serviço"
+        ],
+        "summary": "Enviar foto ou comprovante da OS (PNG, JPEG ou WEBP, até 5 MB; campo 'arquivo')",
+        "description": "Papéis permitidos: dono, mecanico (atribuída). A permissão é verificada no backend. Tipo validado pelo conteúdo. Free: até 3 anexos por OS (402 ao exceder).",
+        "responses": {
+          "201": {
+            "description": "Criado"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "402": {
+            "description": "Limite do plano atingido (codigo=limite_plano)"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          },
+          "503": {
+            "description": "Serviço dependente indisponível"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "arquivo": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/os/{os_id}/anexos/{anexo_id}/arquivo": {
+      "get": {
+        "tags": [
+          "Ordens de Serviço"
+        ],
+        "summary": "Ler o arquivo do anexo (bucket privado; só quem vê a OS)",
+        "description": "Papéis permitidos: dono, mecanico (atribuída), cliente (própria). A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "anexo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/os/{os_id}/anexos/{anexo_id}": {
+      "delete": {
+        "tags": [
+          "Ordens de Serviço"
+        ],
+        "summary": "Remover anexo",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "anexo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
       }
     }
   }
