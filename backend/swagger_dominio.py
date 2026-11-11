@@ -81,4 +81,36 @@ PATHS: dict[str, Any] = {
         "delete": _com_id(_op("Clientes e Veículos", "Remover veículo (sem ordens de serviço)", "dono", "200",
                               ("401", "403", "404", "409")), "veiculo_id"),
     },
+    "/api/os": {
+        "get": _op("Ordens de Serviço", "Listar OS (dono: todas; mecânico: atribuídas; cliente: dos seus veículos)",
+                   "dono, mecanico, cliente", "200", ("401", "403", "409")),
+        "post": _op("Ordens de Serviço", "Abrir ordem de serviço", "dono, mecanico", "201",
+                    ("400", "401", "402", "403", "404", "409", "503"),
+                    {"veiculo_id": "integer", "descricao": "string", "mecanico_id": "integer"},
+                    "No plano Free: 20 OS por mês (402 ao exceder)."),
+    },
+    "/api/os/{os_id}": {
+        "get": _com_id(_op("Ordens de Serviço", "Detalhar OS com itens", "dono, mecanico (atribuída), cliente (própria)",
+                           "200", ("401", "403", "404", "409")), "os_id"),
+        "put": _com_id(_op("Ordens de Serviço", "Editar descrição e mecânico da OS", "dono, mecanico (atribuída)", "200",
+                           ("400", "401", "403", "404", "409", "503"),
+                           {"descricao": "string", "mecanico_id": "integer"}), "os_id"),
+        "delete": _com_id(_op("Ordens de Serviço", "Excluir OS (exclusão lógica; não devolve cota do plano)", "dono",
+                              "200", ("401", "403", "404", "409")), "os_id"),
+    },
+    "/api/os/{os_id}/itens": {"post": _com_id(_op(
+        "Ordens de Serviço", "Adicionar item (serviço ou peça); o total é a soma dos itens", "dono, mecanico (atribuída)",
+        "201", ("400", "401", "403", "404", "409"),
+        {"tipo": "string", "descricao": "string", "quantidade": "integer", "valor_unitario_centavos": "integer"}),
+        "os_id")},
+    "/api/os/{os_id}/itens/{item_id}": {"delete": {
+        **_op("Ordens de Serviço", "Remover item da OS", "dono, mecanico (atribuída)", "200",
+              ("401", "403", "404", "409")),
+        "parameters": _id("os_id") + _id("item_id")}},
+    "/api/os/{os_id}/status": {"post": _com_id(_op(
+        "Ordens de Serviço",
+        "Mudar o status (aberta → orcamento_aprovado → em_servico → pronta → entregue; cancelada só pelo dono)",
+        "aprovar orçamento: dono, cliente; iniciar/finalizar serviço: dono, mecanico; entregar e cancelar: dono",
+        "200", ("401", "403", "404", "409"), {"status": "string"},
+        "Transição inválida responde 409."), "os_id")},
 }

@@ -1877,7 +1877,10 @@ def delete_comment(comment_id: int):
 
 from backend.dominio import bp as dominio_bp  # noqa: E402  (rotas do domínio da oficina)
 
+from backend.ordens import bp as ordens_bp  # noqa: E402
+
 app.register_blueprint(dominio_bp)
+app.register_blueprint(ordens_bp)
 
 
 @app.route('/', defaults={'path': ''})

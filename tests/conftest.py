@@ -139,10 +139,11 @@ class FakeAuth:
 @pytest.fixture
 def gw(monkeypatch):
     """Gateway com SQLite em memória, auth simulado e log capturado."""
-    from backend import app as core, dominio
+    from backend import app as core, dominio, ordens
     from backend.database import Base
     _, scope = make_sqlite_scope(Base)
     monkeypatch.setattr(dominio, 'session_scope', scope)
+    monkeypatch.setattr(ordens, 'session_scope', scope)
     auth = FakeAuth()
     eventos: list[dict] = []
     monkeypatch.setattr(core, '_forward_to_auth', auth)
