@@ -210,6 +210,7 @@ def log_event(
     acao: str,
     usuario_id: int | None = None,
     detalhe: str | dict = '',
+    **campos: Any,
 ) -> None:
     """Envia um evento de auditoria ao log-service de forma assíncrona.
 
@@ -231,6 +232,8 @@ def log_event(
                 'acao': acao,
                 'detalhe': detalhe_str,
                 'ip': ip,
+                # oficina_id, papel, recurso, recurso_id (eventos de negócio)
+                **{k: v for k, v in campos.items() if k in ('oficina_id', 'papel', 'recurso', 'recurso_id')},
             },
             headers={'X-Internal-Token': internal_token()},
             timeout=3,
@@ -619,6 +622,8 @@ def admin_list_logs():
         params['cursor'] = cursor
     if acao:
         params['acao'] = acao
+    if request.args.get('oficina_id'):
+        params['oficina_id'] = request.args['oficina_id']
     if target_usuario_id:
         params['usuario_id'] = target_usuario_id
     if data_inicio:

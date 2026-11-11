@@ -113,4 +113,8 @@ PATHS: dict[str, Any] = {
         "aprovar orçamento: dono, cliente; iniciar/finalizar serviço: dono, mecanico; entregar e cancelar: dono",
         "200", ("401", "403", "404", "409"), {"status": "string"},
         "Transição inválida responde 409."), "os_id")},
+    "/api/auditoria": {"get": _op(
+        "Oficina", "Eventos de negócio da minha oficina (quem, papel, recurso e quando)", "dono", "200",
+        ("401", "403", "409", "503"), None,
+        "Filtros: acao (tipo de evento, ex.: os.), usuario_id, n, cursor. A oficina é sempre a do usuário logado.")},
 }

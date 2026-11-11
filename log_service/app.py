@@ -164,6 +164,7 @@ def record_log():
 
     Payload esperado (JSON):
         usuario_id  : int | None
+        oficina_id, papel, recurso, recurso_id : opcionais (eventos de negócio)
         acao        : str          (ex: "login", "logout", "favoritar", "comentar", "403")
         detalhe     : str | None   (informação adicional opcional)
         ip          : str | None   (IP de origem — bônus)
@@ -179,6 +180,11 @@ def record_log():
     acao = str(payload.get('acao', '')).strip()
     detalhe = str(payload.get('detalhe', '')).strip()
     ip = str(payload.get('ip', '')).strip()
+    # Campos de negócio (Atividade 10): quem (papel), onde (oficina) e em quê (recurso)
+    oficina_id = payload.get('oficina_id')
+    papel = str(payload.get('papel') or '').strip()
+    recurso = str(payload.get('recurso') or '').strip()
+    recurso_id = payload.get('recurso_id')
 
     if not acao:
         return json_error('Campo "acao" é obrigatório.')
@@ -190,6 +196,10 @@ def record_log():
             'acao': acao,
             'detalhe': detalhe,
             'ip': ip,
+            'oficina_id': str(oficina_id) if oficina_id is not None else '',
+            'papel': papel,
+            'recurso': recurso,
+            'recurso_id': str(recurso_id) if recurso_id is not None else '',
             # timestamp em milissegundos (para referência humana além do ID do stream)
             'ts_ms': str(int(time.time() * 1000)),
         }
@@ -235,6 +245,7 @@ def list_logs():
 
         acao_filter = request.args.get('acao', '').strip().lower()
         usuario_id_filter = request.args.get('usuario_id', '').strip()
+        oficina_id_filter = request.args.get('oficina_id', '').strip()
         data_inicio = request.args.get('data_inicio')
         data_fim = request.args.get('data_fim')
         cursor = request.args.get('cursor', '').strip()
@@ -243,7 +254,7 @@ def list_logs():
         effective_end = cursor if cursor else end
 
         # Se houver filtros, buscamos um número maior para garantir que encontramos os registros
-        fetch_limit = min(MAX_LOG_ENTRIES, max(n * 4, 200)) if (acao_filter or usuario_id_filter or data_inicio or data_fim) else n + 1
+        fetch_limit = min(MAX_LOG_ENTRIES, max(n * 4, 200)) if (acao_filter or usuario_id_filter or oficina_id_filter or data_inicio or data_fim) else n + 1
 
         raw_entries = r.xrevrange(LOG_STREAM_KEY, max=effective_end, min=start, count=fetch_limit)
         
@@ -261,6 +272,10 @@ def list_logs():
 
             # Filtro por usuário
             if usuario_id_filter and fields.get('usuario_id') != usuario_id_filter:
+                continue
+
+            # Filtro por oficina
+            if oficina_id_filter and fields.get('oficina_id') != oficina_id_filter:
                 continue
 
             # Filtro por timestamp
@@ -284,6 +299,10 @@ def list_logs():
                 'acao': fields.get('acao', ''),
                 'detalhe': fields.get('detalhe', '') or None,
                 'ip': fields.get('ip', '') or None,
+                'oficina_id': fields.get('oficina_id') or None,
+                'papel': fields.get('papel') or None,
+                'recurso': fields.get('recurso') or None,
+                'recurso_id': fields.get('recurso_id') or None,
                 'ts_ms': ts_ms,
             })
 

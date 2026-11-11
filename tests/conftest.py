@@ -148,8 +148,8 @@ def gw(monkeypatch):
     eventos: list[dict] = []
     monkeypatch.setattr(core, '_forward_to_auth', auth)
     monkeypatch.setattr(core, 'log_event',
-                        lambda acao, usuario_id=None, detalhe='': eventos.append(
-                            {'acao': acao, 'usuario_id': usuario_id, 'detalhe': detalhe}))
+                        lambda acao, usuario_id=None, detalhe='', **campos: eventos.append(
+                            {'acao': acao, 'usuario_id': usuario_id, 'detalhe': detalhe, **campos}))
     monkeypatch.setattr(core, 'ensure_schema', lambda: None)
     core.app.config['TESTING'] = True
     with core.app.test_client() as c:

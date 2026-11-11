@@ -98,7 +98,7 @@ OPENAPI_SPEC: dict[str, Any] = {
                                     "acao": {
                                         "type": "string",
                                         "example": "login",
-                                        "description": "Identificador do evento (ex: login, logout, favoritar, 403_acesso_logs)",
+                                        "description": "Identificador do evento (ex: login, logout, os.aberta, os.status_alterado, acesso_negado, plano.limite_atingido)",
                                     },
                                     "detalhe": {
                                         "type": "string",
@@ -110,6 +110,11 @@ OPENAPI_SPEC: dict[str, Any] = {
                                         "nullable": True,
                                         "example": "172.20.0.1",
                                     },
+                                    "oficina_id": {"type": "integer", "nullable": True, "example": 3,
+                                                   "description": "Oficina (tenant) do evento de negócio"},
+                                    "papel": {"type": "string", "nullable": True, "example": "dono"},
+                                    "recurso": {"type": "string", "nullable": True, "example": "os"},
+                                    "recurso_id": {"type": "integer", "nullable": True, "example": 12},
                                 },
                             }
                         }

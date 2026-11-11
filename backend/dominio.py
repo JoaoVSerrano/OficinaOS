@@ -43,7 +43,9 @@ def log_negocio(evento: str, user: dict[str, Any] | None, recurso: str = '', rec
     dados = dict(detalhe or {})
     dados.update({'papel': (user or {}).get('role'), 'oficina_id': (user or {}).get('oficina_id'),
                   'recurso': recurso, 'recurso_id': recurso_id})
-    _core().log_event(evento, usuario_id=(user or {}).get('id'), detalhe=dados)
+    _core().log_event(evento, usuario_id=(user or {}).get('id'), detalhe=dados,
+                      oficina_id=(user or {}).get('oficina_id'), papel=(user or {}).get('role'),
+                      recurso=recurso, recurso_id=recurso_id)
 
 
 def _json() -> dict[str, Any]:
@@ -508,3 +510,36 @@ def remover_veiculo(veiculo_id: int):
             return erro('O veículo tem ordens de serviço e não pode ser removido.', 409)
         db.delete(veiculo)
     return jsonify({'ok': True})
+
+
+# ---------------------------------------------------------------------------
+# Auditoria da oficina (dono vê só os eventos da própria oficina)
+# ---------------------------------------------------------------------------
+
+@bp.get('/api/auditoria')
+@require_roles('dono')
+def auditoria_da_oficina():
+    """Eventos de negócio da oficina. `oficina_id` é FORÇADO pelo servidor (nunca vem da requisição)."""
+    core = _core()
+    params: dict[str, Any] = {'oficina_id': g.user['oficina_id'], 'n': request.args.get('n', '50')}
+    for chave in ('acao', 'cursor', 'usuario_id'):
+        if request.args.get(chave):
+            params[chave] = request.args[chave]
+    try:
+        resp = requests.get(f'{core.log_service_url()}/logs', params=params,
+                            headers={'X-Internal-Token': core.internal_token()}, timeout=10)
+        resp.raise_for_status()
+        dados = resp.json()
+    except requests.RequestException as exc:
+        core.app.logger.error('log-service indisponível na auditoria: %s', exc)
+        return erro('Serviço de log indisponível.', 503)
+    nomes: dict[str, str] = {}
+    try:
+        equipe_resp = core._forward_to_auth('GET', f'/internal/oficinas/{g.user["oficina_id"]}/usuarios')
+        if equipe_resp.status_code == 200:
+            nomes = {str(u['id']): u['nome'] for u in equipe_resp.json().get('usuarios', [])}
+    except requests.RequestException:
+        pass
+    for evento in dados.get('logs', []):
+        evento['usuario_nome'] = nomes.get(str(evento.get('usuario_id') or ''))
+    return jsonify(dados)
