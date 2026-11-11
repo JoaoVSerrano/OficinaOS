@@ -1875,6 +1875,11 @@ def delete_comment(comment_id: int):
 # Frontend estático
 # ---------------------------------------------------------------------------
 
+from backend.dominio import bp as dominio_bp  # noqa: E402  (rotas do domínio da oficina)
+
+app.register_blueprint(dominio_bp)
+
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_frontend(path: str):

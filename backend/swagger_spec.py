@@ -907,6 +907,13 @@ OPENAPI_SPEC: dict[str, Any] = {
 }
 
 
+# Rotas do domínio da oficina (Atividade 10/11) vivem em swagger_dominio.py
+from backend.swagger_dominio import PATHS as _PATHS_DOMINIO, TAGS as _TAGS_DOMINIO  # noqa: E402
+
+OPENAPI_SPEC["paths"].update(_PATHS_DOMINIO)
+OPENAPI_SPEC["tags"].extend(_TAGS_DOMINIO)
+
+
 def get_openapi_json() -> str:
     return json.dumps(OPENAPI_SPEC, indent=2, ensure_ascii=False)
 
