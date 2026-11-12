@@ -21,6 +21,7 @@ export const routes: Routes = [
       { path: 'veiculos', loadComponent: () => import('./pages/veiculos').then((m) => m.Veiculos), title: 'Veículos — OficinaOS' },
       { path: 'equipe', canActivate: [papel('dono')], loadComponent: () => import('./pages/equipe').then((m) => m.Equipe), title: 'Equipe — OficinaOS' },
       { path: 'perfil', loadComponent: () => import('./pages/perfil').then((m) => m.Perfil), title: 'Meu perfil — OficinaOS' },
+      { path: 'admin', canActivate: [papel('admin')], loadComponent: () => import('./pages/admin').then((m) => m.Admin), title: 'Painel da plataforma — OficinaOS' },
       { path: 'auditoria', canActivate: [papel('dono', 'admin')], loadComponent: () => import('./pages/auditoria').then((m) => m.Auditoria), title: 'Auditoria — OficinaOS' },
     ],
   },

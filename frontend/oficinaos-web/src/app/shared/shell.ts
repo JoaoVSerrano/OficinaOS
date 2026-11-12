@@ -43,7 +43,7 @@ export class Shell {
     const papel = this.user()?.role;
     const itens: { link: string; texto: string }[] = [];
     if (papel === 'admin') {
-      itens.push({ link: '/app/auditoria', texto: 'Auditoria' });
+      itens.push({ link: '/app/admin', texto: 'Painel' }, { link: '/app/auditoria', texto: 'Auditoria' });
     } else {
       itens.push({ link: '/app/os', texto: 'Ordens de serviço' });
       if (papel === 'dono' || papel === 'mecanico') itens.push({ link: '/app/clientes', texto: 'Clientes' });
