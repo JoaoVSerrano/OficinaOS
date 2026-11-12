@@ -535,6 +535,18 @@ OPENAPI_SPEC: dict[str, Any] = {
                 }
             }
         },
+        "/api/admin/painel": {
+            "get": {
+                "tags": ["Administração & Auditoria"],
+                "summary": "Painel da plataforma: oficinas e usuários por plano, assinaturas ativas, MRR de teste e últimos eventos (Apenas Admin)",
+                "responses": {
+                    "200": {"description": "Números do painel"},
+                    "401": {"description": "Sem login"},
+                    "403": {"description": "Papel diferente de admin"},
+                    "503": {"description": "Pagamentos ou autenticação indisponíveis"},
+                },
+            }
+        },
         "/api/admin/logs": {
             "get": {
                 "tags": ["Administração & Auditoria"],

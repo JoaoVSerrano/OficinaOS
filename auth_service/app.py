@@ -545,6 +545,22 @@ def internal_set_oficina(user_id: int):
         return jsonify({'user': serialize_user_dict(user)})
 
 
+@app.get('/internal/usuarios/contagem')
+def internal_usuarios_contagem():
+    """Quantidade de usuários por oficina (admin não conta), para o painel da plataforma."""
+    err = require_internal_token()
+    if err:
+        return err
+    from sqlalchemy import func
+    with session_scope() as db:
+        linhas = db.execute(
+            select(User.oficina_id, func.count(User.id)).where(User.role != 'admin').group_by(User.oficina_id)
+        ).all()
+    por_oficina = {str(of): int(n) for of, n in linhas if of}
+    sem = sum(int(n) for of, n in linhas if not of)
+    return jsonify({'por_oficina': por_oficina, 'sem_oficina': sem})
+
+
 @app.get('/internal/oficinas/<int:oficina_id>/usuarios')
 def internal_oficina_usuarios(oficina_id: int):
     """Equipe da oficina (dono, mecânicos, clientes), sem dados sensíveis."""

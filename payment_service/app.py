@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 from payment_service.database import session_scope, upgrade_database
 from payment_service.models import Assinatura
-from payment_service.planos import plano_da_oficina
+from payment_service.planos import STATUS_PRO, plano_da_oficina
 from payment_service.webhooks import processar_evento
 
 app = Flask(__name__)
@@ -154,6 +154,23 @@ def plano_interno():
     with session_scope() as db:
         dados = plano_da_oficina(db, oficina_id)
     return jsonify({'oficina_id': oficina_id, **dados})
+
+@app.get('/internal/resumo')
+def resumo_interno():
+    """Números do painel admin: assinaturas ativas, MRR de teste e oficinas Pro (só o banco)."""
+    err = require_internal_token()
+    if err:
+        return err
+    with session_scope() as db:
+        linhas = db.scalars(select(Assinatura).where(Assinatura.plano == 'pro')).all()
+        ativas = [a for a in linhas if a.status in ('active', 'trialing')]
+        return jsonify({
+            'assinaturas_ativas': len(ativas),
+            'mrr_centavos': sum(a.valor_mensal_centavos for a in ativas),
+            'moeda': 'brl',
+            'inadimplentes': sum(1 for a in linhas if a.inadimplente),
+            'oficinas_pro': sorted(a.oficina_id for a in linhas if a.status in STATUS_PRO),
+        })
 
 @app.post('/checkout')
 def create_checkout():

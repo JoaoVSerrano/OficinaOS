@@ -582,3 +582,54 @@ def payment_portal():
     if status == 200:
         log_negocio('assinatura.portal_aberto', user, 'assinatura', user['oficina_id'])
     return jsonify(corpo), status
+
+
+# ---------------------------------------------------------------------------
+# Painel admin da plataforma (Atividade 11): planos, assinaturas ativas, MRR de teste e eventos
+# ---------------------------------------------------------------------------
+
+def _eventos_recentes(n: int) -> list[dict[str, Any]]:
+    """Últimos eventos do log-service; o log é acessório, então falha vira lista vazia."""
+    core = _core()
+    try:
+        resp = requests.get(f'{core.log_service_url()}/logs', params={'n': n},
+                            headers={'X-Internal-Token': core.internal_token()}, timeout=5)
+        resp.raise_for_status()
+        return resp.json().get('logs', [])
+    except Exception as exc:
+        core.app.logger.warning('log-service indisponível no painel: %s', exc)
+        return []
+
+
+@bp.get('/api/admin/painel')
+@require_roles('admin', precisa_oficina=False)
+def admin_painel():
+    from sqlalchemy import select
+    core = _core()
+    try:
+        resumo = core._forward_to_payment('GET', '/internal/resumo')
+        contagem = core._forward_to_auth('GET', '/internal/usuarios/contagem')
+        if resumo.status_code != 200 or contagem.status_code != 200:
+            raise requests.RequestException('resposta inesperada')
+        resumo, contagem = resumo.json(), contagem.json()
+    except requests.RequestException as exc:
+        core.app.logger.error('Painel admin sem dados de pagamento/usuários: %s', exc)
+        return erro('Não foi possível reunir os dados do painel agora. Tente novamente.', 503)
+
+    with session_scope() as db:
+        ids = set(db.scalars(select(Oficina.id)).all())
+    pro = {i for i in resumo.get('oficinas_pro', []) if i in ids}     # Pro de oficina que não existe é ignorado
+    por_oficina = {int(k): v for k, v in (contagem.get('por_oficina') or {}).items() if int(k) in ids}
+    return jsonify({
+        'oficinas_por_plano': {'free': len(ids) - len(pro), 'pro': len(pro)},
+        'usuarios_por_plano': {
+            'free': sum(v for k, v in por_oficina.items() if k not in pro),
+            'pro': sum(v for k, v in por_oficina.items() if k in pro),
+            'sem_oficina': contagem.get('sem_oficina', 0),
+        },
+        'assinaturas_ativas': resumo.get('assinaturas_ativas', 0),
+        'inadimplentes': resumo.get('inadimplentes', 0),
+        'mrr_centavos': resumo.get('mrr_centavos', 0),
+        'moeda': resumo.get('moeda', 'brl'),
+        'eventos': _eventos_recentes(20),
+    })

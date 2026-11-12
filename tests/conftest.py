@@ -126,6 +126,15 @@ class FakeAuth:
                 return self._resp(409, {'error': 'Já existe uma conta com esse e-mail.'})
             uid = self.add(body['role'], body['oficina_id'], body['nome'], body['email'])
             return self._resp(201, {'user': self.users[uid]})
+        if path == '/internal/usuarios/contagem':
+            cont: dict[str, int] = {}
+            for u in self.users.values():
+                if u['role'] == 'admin':
+                    continue
+                chave = str(u['oficina_id']) if u['oficina_id'] else 'sem_oficina'
+                cont[chave] = cont.get(chave, 0) + 1
+            return self._resp(200, {'por_oficina': {k: v for k, v in cont.items() if k != 'sem_oficina'},
+                                    'sem_oficina': cont.get('sem_oficina', 0)})
         if path.startswith('/internal/oficinas/') and path.endswith('/usuarios'):
             oid = int(path.split('/')[3])
             return self._resp(200, {'usuarios': [u for u in self.users.values() if u['oficina_id'] == oid]})

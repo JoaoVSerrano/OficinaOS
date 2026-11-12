@@ -31,6 +31,12 @@ OPENAPI_SPEC: dict[str, Any] = {
                 }
             }
         },
+        "/internal/resumo": {
+            "get": {
+                "summary": "Resumo para o painel admin: assinaturas ativas, MRR de teste e oficinas Pro",
+                "responses": {"200": {"description": "assinaturas_ativas, mrr_centavos, moeda, inadimplentes, oficinas_pro."}}
+            }
+        },
         "/checkout": {
             "post": {
                 "summary": "Inicia o checkout da assinatura Pro da oficina (customer reutilizado; 409 se já é Pro)",

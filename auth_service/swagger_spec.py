@@ -398,6 +398,17 @@ OPENAPI_SPEC: dict[str, Any] = {
                 },
             }
         },
+        "/internal/usuarios/contagem": {
+            "get": {
+                "tags": ["Interno"],
+                "summary": "Usuários por oficina, sem contar admin (painel da plataforma)",
+                "security": [{"InternalToken": []}],
+                "responses": {
+                    "200": {"description": "por_oficina (id -> quantidade) e sem_oficina"},
+                    "403": {"description": "Token interno ausente ou inválido"},
+                },
+            }
+        },
         "/internal/oficinas/{oficina_id}/usuarios": {
             "get": {
                 "tags": ["Interno"],

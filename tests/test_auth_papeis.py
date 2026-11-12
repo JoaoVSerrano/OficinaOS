@@ -93,3 +93,15 @@ def test_admin_troca_papel_com_validacao(auth_client, monkeypatch):
 def test_dono_nao_troca_papel_de_ninguem(auth_client):
     uid = _registrar(auth_client).get_json()['user']['id']
     assert auth_client.post(f'/admin/users/{uid}/role', json={'role': 'admin'}).status_code == 403
+
+
+def test_contagem_interna_de_usuarios_por_oficina(auth_client):
+    """T11.7: contagem para o painel admin; exige token interno e ignora admin."""
+    import os
+    h = {'X-Internal-Token': os.environ['INTERNAL_TOKEN']}
+    assert auth_client.get('/internal/usuarios/contagem').status_code == 403
+    r = auth_client.get('/internal/usuarios/contagem', headers=h)
+    assert r.status_code == 200
+    corpo = r.get_json()
+    assert set(corpo) == {'por_oficina', 'sem_oficina'}
+    assert all(isinstance(v, int) for v in corpo['por_oficina'].values())
