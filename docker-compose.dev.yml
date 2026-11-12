@@ -36,5 +36,19 @@ services:
       mariadb:
         condition: service_healthy
 
+  # Portas e subnet próprias para conviver com outras stacks na mesma máquina.
+  prometheus:
+    ports: !override
+      - "127.0.0.1:9092:9090"
+  grafana:
+    ports: !override
+      - "127.0.0.1:3012:3000"
+
+networks:
+  oficinaos-net:
+    ipam:
+      config: !override
+        - subnet: 10.211.0.0/24
+
 volumes:
   mariadb-dev-data:
