@@ -1,0 +1,17 @@
+sequenceDiagram
+    autonumber
+    actor M as Mecânico
+    participant A as app (gateway)
+    participant U as auth-service
+    participant D as MariaDB
+    participant L as log-service
+    M->>A: POST /api/os/12/status {"status":"pronta"} + cookie de sessão
+    A->>U: GET /me (cookie + X-Internal-Token)
+    U-->>A: usuário: id, papel mecanico, oficina_id
+    Note over A: papel e oficina vêm do auth-service, nunca da requisição
+    A->>D: SELECT OS 12 WHERE oficina_id = oficina do usuário AND mecanico_id = ele
+    D-->>A: OS em_servico (ou nada, e a resposta é 404)
+    Note over A: transição em_servico para pronta é permitida ao mecânico
+    A->>D: UPDATE ordens_servico SET status = pronta
+    A-)L: POST /log os.status_alterado (usuário, papel, oficina, recurso)
+    A-->>M: 200 com a OS atualizada

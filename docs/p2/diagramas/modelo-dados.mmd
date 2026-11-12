@@ -1,0 +1,75 @@
+erDiagram
+    OFICINAS ||--o{ CLIENTES : tem
+    OFICINAS ||--o{ VEICULOS : tem
+    OFICINAS ||--o{ ORDENS_SERVICO : tem
+    CLIENTES ||--o{ VEICULOS : possui
+    VEICULOS ||--o{ ORDENS_SERVICO : recebe
+    ORDENS_SERVICO ||--o{ ITENS_OS : contem
+    ORDENS_SERVICO ||--o{ ANEXOS_OS : tem
+    OFICINAS ||--o| ASSINATURAS : assina
+    OFICINAS {
+        int id PK
+        string nome
+        string codigo_convite UK
+        timestamp criada_em
+    }
+    CLIENTES {
+        int id PK
+        int oficina_id FK
+        int usuario_id "id no auth-service"
+        string nome
+        string telefone
+        string email
+    }
+    VEICULOS {
+        int id PK
+        int oficina_id FK
+        int cliente_id FK
+        string placa "unica por oficina"
+        string marca
+        string modelo
+        int ano
+    }
+    ORDENS_SERVICO {
+        int id PK
+        int oficina_id FK
+        int veiculo_id FK
+        int mecanico_id "id no auth-service"
+        int criada_por
+        string status
+        text descricao
+        bigint valor_total_centavos
+        timestamp excluida_em "exclusao logica"
+    }
+    ITENS_OS {
+        int id PK
+        int os_id FK
+        string tipo "servico ou peca"
+        string descricao
+        int quantidade
+        bigint valor_unitario_centavos
+    }
+    ANEXOS_OS {
+        int id PK
+        int os_id FK
+        string chave_objeto "chave no MinIO"
+        string tipo_mime
+        int tamanho_bytes
+        int enviado_por
+    }
+    ASSINATURAS {
+        int id PK
+        int oficina_id UK
+        string stripe_customer_id
+        string stripe_subscription_id
+        string plano "free ou pro"
+        string status
+        bigint valor_mensal_centavos
+        bool inadimplente
+    }
+    USUARIOS {
+        int id PK
+        string email UK
+        string role "admin, dono, mecanico, cliente"
+        int oficina_id "sem FK, outro servico"
+    }

@@ -2,9 +2,11 @@
 
 > Sistema de ordens de serviço para oficinas mecânicas pequenas: troca o caderno e o WhatsApp por um histórico organizado de clientes, veículos e serviços.
 
-> Projeto da disciplina **ISW055 — Introdução à Computação em Nuvem** (Fatec Pompeia), Atividade 9. O repositório nasceu como fork com histórico completo do catálogo de filmes ([tomhanks](https://github.com/JoaoVSerrano/tomhanks)). Hoje ele ainda contém o código dos filmes; a troca de domínio é a Atividade 10.
+> Projeto da disciplina **ISW055 — Introdução à Computação em Nuvem** (Fatec Pompeia), professor [Allan Siriani](https://github.com/siriani). Aluno: João Victor Serrano.
 >
-> **Os valores em R$, horas e quantidades abaixo são estimativas minhas, para raciocinar sobre o negócio. Não vêm de pesquisa ou fonte oficial.**
+> **No ar:** URL_NO_AR (preencher após o deploy no Portainer) · **Relatório P2:** `docs/P2_ISW055_Joao_Serrano.pdf` (disponível na entrega da P2) · **Banco:** [db/](db/) · **API:** `/docs` (Swagger)
+>
+> **Os valores em R$, horas e quantidades da seção 1 a 7 são estimativas minhas, para raciocinar sobre o negócio. Não vêm de pesquisa ou fonte oficial.**
 
 ---
 
@@ -62,11 +64,11 @@
 |---|---|---|
 | Ordens de serviço por mês | até 20 | ilimitadas |
 | Mecânicos | 1 | vários |
-| Histórico do veículo | últimos 30 dias | completo |
-| Fotos e anexos | limitado | liberado |
+| Fotos e anexos | até 3 por ordem de serviço | ilimitados |
 
 - **O que o Free limita:** 20 OS por mês cobrem uma oficina que está testando, mas uma oficina com 15 a 25 carros por semana (60 a 100 por mês) passa do limite na primeira semana. Um mecânico apenas impede que a equipe use o sistema de verdade.
-- **Por que o dono pagaria:** o limite aparece justamente quando o sistema virou hábito. R$ 49/mês custam menos que um único serviço esquecido de cobrar (estimativa de R$ 600+/mês), e o histórico completo do veículo é o que vira argumento na hora da discussão com o cliente.
+- **Por que o dono pagaria:** o limite aparece justamente quando o sistema virou hábito. R$ 49/mês custam menos que um único serviço esquecido de cobrar (estimativa de R$ 600+/mês).
+- **Decisão de escopo:** o plano original previa "histórico do veículo de 30 dias" no Free. Não foi implementado: a tabela acima reflete o que o sistema realmente limita (ordens de serviço por mês, mecânicos e anexos por OS).
 - **Stripe:** a assinatura usa o Checkout hospedado da Stripe, no **modo de teste** nesta disciplina. Nenhum cartão real é cobrado e o sistema nunca guarda dados de cartão.
 
 ---
@@ -100,30 +102,55 @@ Tudo isso é teste: na disciplina o MRR vem de assinaturas em modo de teste da S
 
 ---
 
-## 8. Mapa de reaproveitamento
+## 8. O que cada peça do projeto de origem virou
 
-O que já existe no projeto atual e no que vira no OficinaOS. Conferido contra o código do repositório (serviços `app`, `auth-service`, `log-service`, `payment-service`, Redis, MinIO, Prometheus, Grafana).
-
-| Peça do projeto atual | O que vira no SaaS | Exemplo no OficinaOS |
+| Peça herdada | O que virou no OficinaOS | Onde está |
 |---|---|---|
-| Catálogo de filmes (TMDB), favoritos e comentários | Recurso principal | Ordens de serviço, veículos e clientes |
-| `auth-service` + RBAC (`usuario` e `admin`, `require_role`) | Papéis do negócio | `admin` (dono), `mecanico`, `cliente` |
-| `log-service` (Redis Streams `audit:logs`) | Eventos de negócio | OS aberta, orçamento aprovado, status alterado, veículo entregue |
-| Avatar e perfil (MinIO, `avatar_key` no banco) | Arquivos do domínio | Fotos do veículo na entrada, peças trocadas, comprovantes |
-| `payment-service` + Stripe (Premium, webhook, entitlement no Redis) | Assinatura | Plano Pro da oficina (limites Free × Pro na API) |
-| Painel admin de infraestrutura e logs | Painel do dono | Visão de uso, auditoria da oficina e MRR de teste |
-| MariaDB único com Alembic por serviço | Banco do domínio | Tabelas de oficinas, clientes, veículos, OS, itens, anexos |
-| Swagger/OpenAPI por serviço (extra E1) | Continua valendo | API de OS documentada, com teste de paridade rota × spec |
-| CI/CD com GitHub Actions, GHCR e Portainer (extra E2) | Continua valendo | Deploy a cada push, com smoke test em `/health` |
-| Observabilidade: `/health` real + `/metrics` (`prometheus-flask-exporter`) + Grafana (extra E3) | Continua valendo | Health e métricas dos serviços do domínio |
+| Recurso principal do projeto antigo | Ordens de serviço, itens, clientes e veículos | `backend/ordens.py`, `backend/dominio.py` |
+| `auth-service` + RBAC (`usuario`/`admin`) | Papéis `admin`, `dono`, `mecanico` e `cliente`, com `oficina_id` | `auth_service/` |
+| `log-service` (Redis Streams) | Eventos de negócio com usuário, papel, oficina, recurso e hora | `log_service/`, `/api/auditoria` |
+| Avatar e perfil no MinIO | Fotos e comprovantes da OS em bucket **privado** | `backend/ordens.py` (anexos) |
+| `payment-service` + Stripe | Plano Pro da oficina (Atividade 11) | `payment_service/` |
+| Painel admin de infraestrutura | Continua; ganha painel de planos e MRR de teste (Atividade 11) | `/api/admin/infra/*` |
+| Alembic por serviço | Migrações do gateway, do auth e do payment | `backend/migrations`, `auth_service/migrations`, `payment_service/migrations` |
+| Swagger por serviço | Todas as rotas novas documentadas, com teste de paridade | `/docs`, `tests/test_swagger.py` |
+| CI/CD, GHCR, Portainer | Continua valendo | `.github/workflows/ci-cd.yml` |
+| Observabilidade (`/health`, `/metrics`, Grafana) | Continua valendo | `grafana/`, `prometheus.yml` |
 
 ---
 
 ## 9. Arquitetura atual
 
-Gateway Flask + Angular (`app`) como único serviço público, falando por rede Docker interna com `auth-service`, `log-service` e `payment-service`, com Redis, MinIO, Prometheus e Grafana ao lado e MariaDB externo da turma. Diagrama, regras de negócio e modelo de dados em [DOCUMENTACAO.md](DOCUMENTACAO.md). O diagrama novo, do OficinaOS, vem na Atividade 10.
+O gateway Flask serve também o Angular (build estático em `backend/static`) e é o **único serviço público**. Os demais falam por rede Docker interna.
 
-Documento da P1: [P1 ISW055 — João Serrano (assinado)](docs/P1_ISW055_Joao_Serrano_assinado.pdf).
+```mermaid
+flowchart LR
+    U["Navegador<br/>dono, mecânico, cliente"] -->|HTTPS| APP
+    STRIPE["Stripe<br/>checkout, portal e webhook"]
+    DB[("MariaDB externo<br/>banco da turma")]
+    subgraph VM ["VM Proxmox: Docker + Portainer, rede oficinaos-net (10.201.0.0/24)"]
+        APP["app: gateway Flask + Angular<br/>porta 8080, único serviço público"]
+        AUTH["auth-service<br/>porta 3000, interno"]
+        LOG["log-service<br/>porta 4000, interno"]
+        PAY["payment-service<br/>porta 5000, interno"]
+        REDIS[("Redis<br/>stream audit:logs")]
+        MINIO[("MinIO<br/>anexos privados e avatares")]
+        PROM["Prometheus :9091"] --> GRAF["Grafana :3002"]
+    end
+    APP --> AUTH
+    APP --> LOG
+    APP --> PAY
+    APP --> MINIO
+    APP --> DB
+    AUTH --> DB
+    PAY --> DB
+    LOG --> REDIS
+    PAY -->|API| STRIPE
+    STRIPE -->|webhook assinado| APP
+    PROM -->|/metrics| APP
+```
+
+Detalhes (fluxo de uma requisição, modelo de dados, segurança) em [DOCUMENTACAO.md](DOCUMENTACAO.md). Documento da P1: [P1 ISW055 — João Serrano (assinado)](docs/P1_ISW055_Joao_Serrano_assinado.pdf).
 
 ---
 
@@ -132,7 +159,7 @@ Documento da P1: [P1 ISW055 — João Serrano (assinado)](docs/P1_ISW055_Joao_Se
 | Peça | Camada | Por quê |
 |---|---|---|
 | VM Ubuntu no Proxmox | **IaaS** | Recebo uma máquina virtual crua e sou responsável pelo sistema operacional, pelo Docker e pelas atualizações. |
-| Docker Engine e rede `tomhanks-net` | **IaaS** | Instalado e mantido por mim dentro da VM; é a infraestrutura sobre a qual os containers rodam. |
+| Docker Engine e rede `oficinaos-net` | **IaaS** | Instalado e mantido por mim dentro da VM; é a infraestrutura sobre a qual os containers rodam. |
 | Containers `app`, `auth-service`, `log-service`, `payment-service` | **PaaS** | Só entrego o código e as variáveis de ambiente; a stack sobe, reinicia e é atualizada pelo Portainer sem eu cuidar de servidor por container. |
 | Redis e MinIO (containers) | **PaaS** | São serviços de plataforma consumidos por API (stream/cache e objetos S3); eu configuro, mas não os desenvolvo. |
 | Prometheus e Grafana (containers) | **PaaS** | Plataforma de observabilidade pronta; só forneço configuração e dashboards. |
@@ -140,7 +167,6 @@ Documento da P1: [P1 ISW055 — João Serrano (assinado)](docs/P1_ISW055_Joao_Se
 | MariaDB externo (banco da turma) | **PaaS** | Banco relacional que me é entregue pronto; eu uso o schema, mas não administro o servidor. |
 | Stripe (Checkout, portal, webhook) | **SaaS** | Serviço de pagamentos completo, consumido pela internet; o cartão é digitado na página da Stripe, não no meu sistema. |
 | Google OAuth | **SaaS** | Login federado fornecido pronto pelo Google. |
-| TMDB API | **SaaS** | Base de filmes consumida por API; não guardo nem opero esses dados. |
 | Mailtrap (SMTP de e-mail transacional) | **SaaS** | Serviço de e-mail usado só para enviar o link de recuperação de senha. |
 | GitHub, GitHub Actions e GHCR | **SaaS** | Hospedagem do código, pipeline de CI/CD e registro de imagens, tudo como serviço. |
 
@@ -148,429 +174,70 @@ Documento da P1: [P1 ISW055 — João Serrano (assinado)](docs/P1_ISW055_Joao_Se
 
 ---
 
-## 11. Operação e infraestrutura
+## 11. Papéis e permissões
 
-> Conteúdo técnico herdado do projeto dos filmes (Atividades 1 a 8 e extras). Continua válido para subir a stack; nomes como `tomhanks-net` e variáveis `TMDB_*` serão trocados na Atividade 10. O Portainer ainda aponta para o repositório antigo até essa atividade.
+O papel e a oficina vêm sempre do `auth-service` (rota `/me`), nunca do corpo ou da URL da requisição. A permissão é checada **no backend**, mesmo chamando a API direto; cada tentativa negada vira o evento `acesso_negado` no log.
 
-### 📌 Visão Geral do Projeto
+| Ação | `admin` | `dono` | `mecanico` | `cliente` |
+|---|:-:|:-:|:-:|:-:|
+| Criar a oficina, ver código de convite e equipe | ❌ | ✅ | ❌ | ❌ |
+| Cadastrar cliente e veículo | ❌ | ✅ | ❌ | ❌ |
+| Ver clientes e veículos da oficina | ❌ | ✅ | ✅ (leitura) | só os próprios veículos |
+| Abrir ordem de serviço | ❌ | ✅ | ✅ (fica atribuída a ele) | ❌ |
+| Ver ordens de serviço | ❌ | todas da oficina | só as atribuídas a ele | só as dos próprios veículos |
+| Editar OS, adicionar itens e fotos | ❌ | ✅ | ✅ (as atribuídas) | ❌ |
+| Aprovar orçamento | ❌ | ✅ | ❌ | ✅ (o próprio veículo) |
+| Iniciar serviço e marcar como pronta | ❌ | ✅ | ✅ (as atribuídas) | ❌ |
+| Entregar veículo, cancelar e excluir OS | ❌ | ✅ | ❌ | ❌ |
+| Auditoria da oficina | ❌ | ✅ | ❌ | ❌ |
+| Log de todas as oficinas e painel da plataforma | ✅ | ❌ | ❌ | ❌ |
 
-O **Catálogo de Filmes do Tom Hanks** é uma aplicação completa baseada em arquitetura de microsserviços distribuídos em containers Docker, projetada para execução tanto em ambiente local de desenvolvimento quanto em orquestração de produção via **Portainer**.
+**Isolamento:** toda tabela do domínio tem `oficina_id` (direto ou via `os_id`) e toda consulta passa por `backend/escopo.py`. Abrir o ID de outra oficina responde **404** (sem revelar que o registro existe). Sem login, **401**; papel sem permissão, **403**; transição de status inválida, **409**; limite do plano, **402**.
 
-A solução integra consumo dinâmico da API da TMDB (The Movie Database), autenticação desacoplada, controle de acesso baseado em papéis (RBAC), auditoria de eventos em alta performance com Redis Streams, armazenamento de mídia em Object Storage S3 compatível (MinIO), telemetria completa com Prometheus e Grafana, e pipeline de CI/CD automatizado com GitHub Actions e Container Registry (GHCR).
+**Status da OS:** `aberta` → `orcamento_aprovado` → `em_servico` → `pronta` → `entregue` (e `cancelada`, só pelo dono, antes de entregar).
 
----
+**Cadastro:** "Sou dono" cria a oficina; "Sou mecânico" e "Sou cliente" pedem o **código de convite**, mostrado ao dono na tela Equipe.
 
-### 🏛️ Arquitetura do Sistema
+## 12. Planos e limites
 
-Todos os serviços comunicam-se de forma isolada através de uma rede bridge dedicada `tomhanks-net` com endereçamento CIDR fixo (`10.201.0.0/24`), sem uso de `container_name` para permitir escalabilidade e padronização pelo nome do serviço. O serviço `app` atua como **Gateway da Aplicação** e único ponto de entrada para o tráfego do usuário.
+| | Free | Pro (R$ 49/mês) |
+|---|---|---|
+| Ordens de serviço por mês (fuso America/Sao_Paulo; excluir não devolve a cota) | 20 | sem limite |
+| Mecânicos | 1 | sem limite |
+| Anexos por OS | 3 | sem limite |
 
-```mermaid
-flowchart TD
-    subgraph Internet ["🌐 Clientes Externos (Navegador / Mobile)"]
-        User["Usuário / Navegador"]
-    end
+Ao passar do limite a API responde **402** com `{erro, codigo: "limite_plano", limite, uso, plano, como_liberar}` e registra `plano.limite_atingido`. A assinatura Pro (Stripe, **somente modo de teste**) é a Atividade 11.
 
-    subgraph Host ["🖥️ Host Docker — Rede Interna: tomhanks-net (Subnet 10.201.0.0/24)"]
-        Gateway["📦 app (Gateway / Frontend Angular)\nPorta Host: :8080"]
-        Auth["🔒 auth-service\nPorta Interna: :3000 (Sem porta pública)"]
-        Log["📝 log-service\nPorta Interna: :4000 (Sem porta pública)"]
-        Redis[("⚡ redis (audit:logs Stream)\nPorta Interna: :6379 (Sem porta pública)")]
-        MinIO[("🪣 minio (Chainguard Object Storage)\nPortas Internas: :9000 / :9001 (expose)")]
-        Prometheus["📊 prometheus\nPorta Host: :9091 -> :9090"]
-        Grafana["📈 grafana\nPorta Host: :3002 -> :3000"]
-    end
-
-    subgraph Cloud ["☁️ Dependências Externas & Nuvem"]
-        MariaDB[("🗄️ MariaDB Remoto da Turma\nPorta: 3306")]
-        TMDB["🎬 The Movie Database (TMDB API)"]
-        Mailtrap["📬 Mailtrap SMTP Sandbox"]
-    end
-
-    User -->|HTTP :8080| Gateway
-    User -.->|HTTP :9091| Prometheus
-    User -.->|HTTP :3002| Grafana
-
-    Gateway -->|Proxy /api/auth/*| Auth
-    Gateway -->|Proxy /api/admin/logs| Log
-    Gateway -->|Registro de eventos de catálogo| Log
-    Gateway -->|Proxy de avatares /api/profile/avatar/*| MinIO
-    Gateway -->|Consulta de filmes| TMDB
-    Gateway -->|Favoritos e Comentários| MariaDB
-
-    Auth -->|Usuários, Senhas e Tokens| MariaDB
-    Auth -->|Upload de Avatar| MinIO
-    Auth -->|Auditoria de autenticação| Log
-    Auth -->|Recuperação de Senha| Mailtrap
-
-    Log -->|XADD / XREVRANGE| Redis
-
-    Prometheus -->|Scrape app:8080/metrics| Gateway
-    Prometheus -->|Scrape auth-service:3000/metrics| Auth
-    Prometheus -->|Scrape log-service:4000/metrics| Log
-    Grafana -->|Consultas PromQL| Prometheus
-```
-
----
-
-### 🔌 Tabela de Serviços e Portas
-
-| Serviço | Container / Imagem | Porta Interna | Porta Publicada no Host | Exposição Pública | Finalidade |
-|---|---|---|---|---|---|
-| **app** | Build (`Dockerfile`) | 8080 | `${PORT:-8080}:8080` | **Sim** (Público) | Gateway reverso, API do catálogo e arquivos do frontend Angular |
-| **auth-service** | Build (`Dockerfile.auth`) | 3000 | *Nenhuma* | **Não** (Interno) | Microsserviço de autenticação, sessões, RBAC, Google OAuth e perfil |
-| **payment-service** | Build (`Dockerfile.payment`) | 5000 | *Nenhuma* | **Não** (Interno) | Microsserviço de pagamentos, assinaturas Stripe e entitlement |
-| **log-service** | Build (`Dockerfile.log`) | 4000 | *Nenhuma* | **Não** (Interno) | Microsserviço de auditoria com persistência em Redis Streams |
-| **redis** | `redis:7-alpine` | 6379 | *Nenhuma* | **Não** (Interno) | Base de dados em memória para streams de log com persistência AOF |
-| **minio** | `cgr.dev/chainguard/minio:latest` | 9000, 9001 | *Nenhuma* (`expose: 9000, 9001`) | **Não** (Interno) | Object Storage S3 para fotos de perfil dos usuários |
-| **prometheus** | Build (`Dockerfile.prometheus`) | 9090 | `9091:9090` | **Sim** (Monitoramento) | Raspagem e armazenamento de séries temporais de métricas |
-| **grafana** | Build (`Dockerfile.grafana`) | 3000 | `3002:3000` | **Sim** (Dashboards) | Interface gráfica de métricas com dashboards pré-provisionados |
-| **MariaDB** | Nuvem externa | 3306 | Remoto | Conexão Externa | Banco de dados relacional oficial da turma |
-
----
-
-### 🚀 Como Executar
-
-#### 1. Execução Local via Docker Compose
-
-##### Pré-requisitos
-- Docker Engine e Docker Compose instalados.
-- Conectividade com a internet (para download de imagens e acesso ao MariaDB remoto).
-
-##### Passo a passo
-1. Clone o repositório:
-   ```bash
-   git clone https://github.com/JoaoVSerrano/OficinaOS.git
-   cd OficinaOS
-   ```
-2. Crie o arquivo `.env` a partir do modelo de exemplo:
-   ```bash
-   cp .env.example .env
-   ```
-3. Preencha as variáveis de ambiente obrigatórias no `.env` (banco de dados, chaves secretas e credenciais do MinIO).
-4. Suba todos os containers com build automatizado:
-   ```bash
-   docker compose up -d --build
-   ```
-5. Acesse os serviços no navegador:
-   - **Catálogo Web**: `http://localhost:8080`
-   - **Swagger UI Interativo**: `http://localhost:8080/apidocs`
-   - **Métricas Prometheus**: `http://localhost:9091`
-   - **Dashboards Grafana**: `http://localhost:3002` (Login: `admin` / senha configurada em `GRAFANA_ADMIN_PASSWORD`)
-
----
-
-#### 2. Deploy no Portainer
-
-No Portainer, a stack é criada diretamente a partir do repositório Git ou colando o arquivo `docker-compose.yml`. Como o arquivo `.env` está no `.gitignore` por segurança e não existe dentro do container do Portainer, **todas as variáveis obrigatórias devem ser declaradas no painel da stack**:
-
-1. Acesse o **Portainer** → **Stacks** → **Add stack**.
-2. Defina o nome da stack (ex: `tomhanks`).
-3. Em **Build method**, selecione **Repository** e informe a URL do repositório: `https://github.com/JoaoVSerrano/OficinaOS.git` (branch `main`).
-4. Na seção **Environment variables**, clique em **Add environment variable** (ou use a opção *Advanced mode*) e adicione todas as variáveis obrigatórias listadas na tabela abaixo.
-5. Em **Automatic updates**, ative o **Webhook** para obter a URL do webhook de atualização contínua utilizada pelo GitHub Actions.
-6. Clique em **Deploy the stack**.
-
-> [!IMPORTANT]
-> O arquivo `docker-compose.yml` utiliza a sintaxe de expansão restritiva `${VAR:?mensagem}` para garantir que nenhum container suba sem as variáveis de ambiente obrigatórias.
-
----
-
-### 🔐 Variáveis de Ambiente
-
-| Variável | Obrigatoriedade | Descrição / Exemplo Seguro |
-|---|:---:|---|
-| `DB_HOST` | **Obrigatória** | Endereço IP ou hostname do servidor MariaDB remoto |
-| `DB_PORT` | **Obrigatória** | Porta do MariaDB remoto (padrão: `3306`) |
-| `DB_USER` | **Obrigatória** | Usuário de acesso ao banco de dados |
-| `DB_PASSWORD` | **Obrigatória** | Senha de acesso ao banco de dados |
-| `DB_NAME` | **Obrigatória** | Nome do esquema/banco de dados |
-| `DB_DRIVER` | Opcional | Driver SQLAlchemy (padrão: `mysql+mysqlconnector`) |
-| `FLASK_SECRET_KEY` | **Obrigatória** | Chave aleatória e longa para assinatura dos cookies de sessão do gateway |
-| `AUTH_SECRET_KEY` | **Obrigatória** | Chave aleatória e longa para assinatura dos cookies de sessão do auth-service |
-| `INTERNAL_TOKEN` | **Obrigatória** | Token compartilhado entre serviços para validação do header `X-Internal-Token` |
-| `MINIO_ROOT_USER` | **Obrigatória** | Usuário de administração do MinIO |
-| `MINIO_ROOT_PASSWORD` | **Obrigatória** | Senha do usuário de administração do MinIO |
-| `MINIO_ACCESS_KEY` | **Obrigatória** | Access Key utilizada pelos microsserviços para gravação no MinIO |
-| `MINIO_SECRET_KEY` | **Obrigatória** | Secret Key utilizada pelos microsserviços para gravação no MinIO |
-| `MINIO_ENDPOINT` | Opcional | Host e porta do MinIO na rede Docker (padrão: `minio:9000`) |
-| `MINIO_BUCKET_NAME` | Opcional | Nome do bucket para armazenar avatares (padrão: `tomhanks-avatars`) |
-| `PORT` | Opcional | Porta pública do gateway exposta no host (padrão: `8080`) |
-| `TMDB_API_KEY` | Opcional | Chave da API do TMDB para catálogo dinâmico de filmes |
-| `TMDB_LANGUAGE` | Opcional | Idioma retornado pela API do TMDB (padrão: `pt-BR`) |
-| `AUTH_ADMIN_NAME` | Opcional | Nome do usuário administrador inicial criado na inicialização |
-| `AUTH_ADMIN_EMAIL` | Opcional | E-mail para criação automática do usuário administrador inicial |
-| `AUTH_ADMIN_PASSWORD` | Opcional | Senha do administrador inicial (mínimo de 6 caracteres) |
-| `GOOGLE_CLIENT_ID` | Opcional | Client ID do Google OAuth 2.0 para login social |
-| `GOOGLE_CLIENT_SECRET` | Opcional | Client Secret do Google OAuth 2.0 |
-| `GOOGLE_REDIRECT_URI` | Opcional | URI de redirecionamento (padrão: `http://localhost:8080/api/auth/google/callback`) |
-| `STRIPE_SECRET_KEY` | Opcional | Chave secreta da Stripe (ex: `sk_test_...`) |
-| `STRIPE_PUBLISHABLE_KEY` | Opcional | Chave pública da Stripe para o frontend (`pk_test_...`) |
-| `STRIPE_WEBHOOK_SECRET` | Opcional | Chave de assinatura para validação dos webhooks da Stripe (`whsec_...`) |
-| `STRIPE_PRICE_ID` | Opcional | ID do preço recorrente do produto Premium na Stripe |
-| `ENTITLEMENT_CACHE_TTL` | Opcional | Tempo em segundos de cache Redis para entitlement (padrão: `300`) |
-| `SMTP_HOST` | Opcional | Host do provedor SMTP (ex: `sandbox.smtp.mailtrap.io`) |
-| `SMTP_PORT` | Opcional | Porta do servidor SMTP (ex: `587`) |
-| `SMTP_USER` | Opcional | Usuário de autenticação SMTP |
-| `SMTP_PASS` | Opcional | Senha de autenticação SMTP |
-| `SMTP_FROM` | Opcional | Endereço do remetente (ex: `noreply@tomhanks.local`) |
-| `PASSWORD_RESET_EXPOSE_LINK` | Opcional | Exibe link de reset no log se `1` (apenas para depuração local) |
-| `GRAFANA_ADMIN_PASSWORD` | Opcional | Senha do usuário `admin` do Grafana (padrão em dev: `admin`) |
-
----
-
-### 📚 Atividades Realizadas
-
-#### Atividade 1 — Containerização da Aplicação
-Containerização inicial do catálogo de filmes utilizando Dockerfile multi-stage, garantindo ambiente desacoplado e build reprodutivo do backend Python e frontend web.
-
----
-
-#### Atividade 2 — Persistência Relacional
-Migração da camada de dados para um banco de dados relacional MariaDB externo com gerenciamento de esquema via **Alembic**, tabelas de filmes favoritos (`favorites`) e comentários (`comments`), com suporte a migrações idempotentes e integridade referencial.
-
----
-
-#### Atividade 3 — Microsserviço de Login Desacoplado
-Extração de toda a responsabilidade de autenticação, sessão de usuário e recuperação de conta do catálogo principal para um microsserviço independente (`auth-service`):
-- **Isolamento de Rede**: O container roda exclusivamente na rede interna `tomhanks-net`, sem nenhuma porta exposta diretamente no host.
-- **Proxy Transparente**: O gateway (`app`) expõe rotas `/api/auth/*` e repassa as requisições via HTTP interno com encaminhamento íntegro de cabeçalhos de cookies `Set-Cookie`.
-- **Recuperação de Senha com Expiração**: Implementação da tabela `reset_tokens` com expiração de 30 minutos, verificação de uso único e integração com Mailtrap para envio de e-mails de recuperação.
-- **Proteção Interna**: Uso do header `X-Internal-Token` para rotas de consumo interno restrito (`/internal/*`).
-
----
-
-#### Atividade 4 — Controle de Acesso por Papel (RBAC)
-
-##### Permissões por Papel
-| Ação | `usuario` | `admin` |
-|---|:---:|:---:|
-| Visualizar catálogo e detalhes | ✅ | ✅ |
-| Favoritar / desfavoritar filmes | ✅ | ✅ |
-| Criar comentários e editar próprio perfil | ✅ | ✅ |
-| Apagar **próprios** comentários | ✅ | ✅ |
-| **Moderação: apagar comentários de qualquer usuário** | ❌ (403) | ✅ |
-| **Listar todos os usuários cadastrados** | ❌ (403) | ✅ |
-| **Alterar papéis de usuários (`usuario` ↔ `admin`)** | ❌ (403) | ✅ |
-| **Consultar logs de auditoria no Redis Streams** | ❌ (403) | ✅ |
-
-##### Ação Exclusiva de Admin
-Moderação de comentários: um `admin` pode remover comentários de qualquer usuário chamando `DELETE /api/comments/<id>`. Um usuário comum tentando remover o comentário de outro usuário recebe `HTTP 403 Forbidden`. O controle ocorre estritamente no servidor (backend) em duas camadas (`backend/app.py` e `auth_service/app.py`), garantindo que chamadas diretas via curl/Postman não consigam burlar as regras.
-
-##### Trade-off: Padrão A vs Padrão B
-- **Padrão A (Enforcement Centralizado — Adotado)**: A cada requisição sensível, o gateway consulta a rota `/me` no `auth-service` em tempo real. A decisão de acesso reflete instantaneamente o estado atual do banco de dados (ex: revogação imediata de permissão de admin sem necessidade de deslogar o usuário).
-- **Padrão B (Claims no Token JWT)**: Embutiria a role no payload assinado do JWT no login. Evitaria chamadas adicionais de rede, porém criaria o problema de propagação: a mudança de perfil só teria efeito após a expiração e renovação do token.
-
----
-
-#### Atividade 5 — Logs e Auditoria com Redis Streams
-
-##### Por que um microsserviço dedicado e por que Redis Streams?
-Logs de auditoria possuem padrão de uso completamente divergente dos dados transacionais de negócio: **volume massivo de escrita sequencial, leitura pontual/analítica e nenhuma necessidade de transações relacionais complexas**. Persistir esses eventos no MariaDB geraria contenção desnecessária de I/O de disco.
-
-O **Redis Streams** foi escolhido pelas seguintes vantagens:
-- Operações de append (`XADD`) em memória com latência inferior a milissegundos.
-- Ordenação nativa e imutável pelo identificador temporal do stream (`<timestamp_ms>-<seq>`).
-- Descarte automático de logs antigos com `MAXLEN ~ 10000` para retenção controlada sem risco de exaustão de memória.
-- Persistência em disco via AOF (`--appendonly yes`) montada em volume Docker (`redis-data`).
-
-##### Eventos Auditados
-`login`, `login_falhou`, `logout`, `favoritar`, `desfavoritar`, `comentar`, `apagar_comentario`, `moderacao_apagar_comentario`, `403_apagar_comentario`, `403_acesso_logs`, `403_editar_perfil`, `403_upload_avatar`, `avatar_atualizado`.
-
----
-
-#### Atividade 6 — Upload e Perfil de Usuário com Object Storage (MinIO)
-
-##### Por que a imagem de perfil não fica no MariaDB?
-Arquivos binários (imagens PNG/JPEG) gravados em colunas `BLOB` incham os arquivos de banco de dados, degradam a performance do cache de páginas (buffer pool), tornam os backups substancialmente mais lentos e aumentam a complexidade de replicação. O padrão arquitetural de nuvem delega binários para um **Object Storage compatível com S3 (MinIO)**, armazenando no banco relacional apenas o identificador da chave (`avatar_key`).
-
-##### Bucket Público vs URL Pré-assinada (Trade-offs)
-- **Bucket com Leitura Pública via Proxy (Adotado)**: Avatares em redes sociais são dados públicos. O acesso simplificado permite caching eficiente em browsers e CDNs sem overhead de CPU para gerar assinaturas criptográficas com expiração a cada renderização.
-- **URLs Pré-assinadas**: Recomendadas para mídias privadas (documentos fiscais, exames médicos). Para fotos de perfil públicas, gerariam complexidade de renovação contínua e invalidariam o cache do cliente.
-
-##### Imagem e Portas no Docker
-O container utiliza a imagem `cgr.dev/chainguard/minio:latest`, com usuário não-root seguro (`user: "0:0"` para permissão no volume existente) e portas 9000 (API S3) e 9001 (Console Web) registradas apenas na diretiva `expose`, mantendo o MinIO totalmente inacessível pela internet externa e visível apenas para os serviços da rede `tomhanks-net`.
-
----
-
-### 🌟 Atividades Extras
-
-#### Atividade Extra E1 — Documentação Swagger/OpenAPI 3.0 em Múltiplos Serviços
-
-> Atividade Extra (ISW055) · Professor: [@siriani](https://github.com/siriani)
-
-Cada microsserviço documenta a **sua própria API**, eliminando especificações monolíticas desatualizadas:
-
-1. **auth-service**: Expõe `/apidocs` e `/api/docs/openapi.json` com suas 14 operações reais (cadastro, login, logout, me, recuperação de senha, perfil, avatar, usuários administrativos e consulta interna).
-2. **log-service**: Expõe spec própria com suas 3 operações reais (`POST /log`, `GET /logs` e `GET /health`), declarando o esquema de segurança de API Key `X-Internal-Token`.
-3. **Gateway (`app`)**: Serve sua especificação pública com 23 operações e disponibiliza interface **Swagger UI Multi-Spec** unificada em `http://localhost:8080/apidocs`. O Swagger UI utiliza a configuração `urls` e `urls.primaryName` para permitir que o desenvolvedor alterne entre as documentações do Gateway, do `auth-service` e do `log-service` através de um seletor visual na barra superior.
-4. **Isolamento de Portas**: Nenhuma porta foi aberta no host para o Swagger dos serviços internos; o gateway busca as especificações de `auth-service` e `log-service` internamente via rede Docker através dos endpoints `/api/docs/auth/openapi.json` e `/api/docs/log/openapi.json`, com timeout curto e fallback resiliente caso o serviço interno esteja offline.
-5. **Prevenção de Dessincronização**: A suíte de testes automatizados (`tests/test_swagger.py`) inspeciona o `app.url_map` de cada serviço e compara as rotas reais com o `paths` do OpenAPI. O teste falha caso qualquer endpoint seja adicionado sem documentação correspondente.
-6. **Script de Geração Reproduzível**: O script `scripts/generate_openapi.py` gera automaticamente os arquivos estáticos `openapi.json` e `openapi.yaml` na raiz do repositório a partir da spec central.
+## 13. Como executar localmente
 
 ```bash
-# Para validar o Swagger interativo e chamadas reais:
-bash demo_swagger.sh
+python3 -m venv venv && . venv/bin/activate
+pip install -r requirements.txt -r auth_service/requirements.txt -r log_service/requirements.txt -r payment_service/requirements.txt pytest
+pytest tests/ -v          # usa os mesmos envs fictícios do CI (veja .github/workflows/ci-cd.yml)
+
+cp .env.example .env      # preencha os valores; nunca versione o .env
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build   # MariaDB local + stack
+./scripts/build_frontend.sh                                                     # recompila o Angular em backend/static
+python scripts/cenarios/ativ10.py --base-url http://localhost:8080              # cenário de aceite
 ```
 
----
+No Portainer a stack usa o `docker-compose.yml` (sem o override de desenvolvimento) e o banco MariaDB da turma; as variáveis ficam na seção *Environment* da stack.
 
-#### Atividade Extra E2 — CI/CD com GitHub Actions, GHCR e Deploy Contínuo no Portainer
+## 14. Banco de dados
 
-> Atividade Extra (ISW055) · Professor: [@siriani](https://github.com/siriani)
+O banco do domínio é recriável a partir do repositório. As tabelas novas (`oficinas`, `clientes`, `veiculos`, `ordens_servico`, `itens_os`, `anexos_os`) têm chaves estrangeiras e são criadas pela migração `0002_dominio_oficina`; o SQL versionado está em [`db/001_dominio.sql`](db/001_dominio.sql) (esquema), [`db/002_seed.sql`](db/002_seed.sql) (dados fictícios, idempotente) e [`db/README.md`](db/README.md). Cada serviço tem o próprio Alembic (`alembic.ini`, `alembic-auth.ini`, `alembic-payment.ini`) e as migrações rodam sozinhas quando o container sobe.
 
-O pipeline `.github/workflows/ci-cd.yml` implementa o ciclo completo de integração, entrega e implantação contínua (CI/CD):
+## 15. Variáveis de ambiente
 
-```
-git push origin main
-       │
-       ▼
- ┌─────────────────────────────────────────────────────────┐
- │ 🧪 Estágio 1: CI (Continuous Integration)              │
- │ - Instalação de dependências de todos os serviços       │
- │ - Definição de variáveis de ambiente seguras para teste │
- │ - Execução de 27 testes automatizados (pytest tests/ -v)│
- └─────────────────────────────────────────────────────────┘
-       │ (apenas se todos os testes passarem)
-       ▼
- ┌─────────────────────────────────────────────────────────┐
- │ 📦 Estágio 2: CD (Continuous Delivery)                  │
- │ - Autenticação segura no GitHub Container Registry     │
- │ - Build com Docker Buildx e cache otimizado             │
- │ - Publicação de 4 imagens com tags SHA e latest no GHCR │
- └─────────────────────────────────────────────────────────┘
-       │ (apenas em push na branch main)
-       ▼
- ┌─────────────────────────────────────────────────────────┐
- │ 🚀 Estágio 3: Deploy Contínuo (Portainer & Smoke Test)  │
- │ - Disparo de webhook da stack no Portainer              │
- │ - Portainer atualiza repositório e executa rebuild      │
- │ - Smoke test automático via GET /api/health (timeout)   │
- └─────────────────────────────────────────────────────────┘
-```
+Somente **nomes** (os valores ficam no `.env` local ou na stack do Portainer): consulte [`.env.example`](.env.example). Obrigatórias: `DB_*`, `FLASK_SECRET_KEY`, `AUTH_SECRET_KEY`, `INTERNAL_TOKEN`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`. Opcionais: Google OAuth, SMTP, Stripe, `MINIO_BUCKET_NAME` (avatares), `MINIO_ANEXOS_BUCKET` (anexos privados) e Grafana.
 
-- **Rastreabilidade**: As imagens são publicadas no GHCR sob `ghcr.io/joaovserrano/oficinaos-app`, `ghcr.io/joaovserrano/oficinaos-auth-service`, `ghcr.io/joaovserrano/oficinaos-log-service` e `ghcr.io/joaovserrano/oficinaos-payment-service`, tagueadas com o SHA curto do commit (`sha-<commit>`) e a tag `latest`.
-- **Deploy com Resiliência**: O webhook do Portainer é acionado com retry automático (`curl --fail --retry 3`). Caso o secret `PORTAINER_WEBHOOK_URL` ainda não tenha sido configurado, o pipeline avisa o desenvolvedor e finaliza sem quebras abruptas.
-- **Smoke Test Automatizado**: Após acionar o webhook, o runner monitora a URL configurada em `DEPLOY_HEALTH_URL` por até 5 minutos com verificações periódicas até confirmar que a aplicação retornou `HTTP 200` com status saudável.
+## 16. Qualidade: testes, Swagger e CI/CD
 
----
+- **Testes:** `pytest tests/ -v` cobre papéis (403), isolamento por oficina (404), limites do plano (402), máquina de estados (409), anexos (tipo pelo conteúdo, tamanho, bucket privado), eventos de log e migrações (SQL offline).
+- **Swagger:** `/docs` agrega gateway, auth e log; `tests/test_swagger.py` falha se uma rota existir sem documentação (e vice-versa). Regenerar `openapi.json/yaml`: `python scripts/generate_openapi.py`.
+- **CI/CD:** push na `main` roda os testes, publica as imagens `oficinaos-*` no GHCR e aciona o webhook do Portainer, com smoke test em `/health`.
+- **Observabilidade:** `/health` com readiness real, `/metrics` e dashboard no Grafana.
 
-#### Atividade Extra E3 — Observabilidade (Readiness Real, Métricas Prometheus e Dashboards Grafana)
+## 17. Histórico do projeto
 
-> Atividade Extra (ISW055) · Professor: [@siriani](https://github.com/siriani)
-
-- **Readiness Real (Verificação Ativa de Dependências)**: Cada endpoint `/health` realiza testes de rede reais em suas dependências (MariaDB, MinIO, Redis, microsserviços parceiros). Se qualquer componente falhar, o status passa para `unhealthy` e retorna `HTTP 503 Service Unavailable`.
-- **Integração com Docker Healthcheck**: Os containers do compose possuem probes configurados a cada 5–15 segundos. Se o Redis cair, o `log-service` passa para `unhealthy` tanto na resposta HTTP quanto no status do container reportado pelo Docker (`docker compose ps`).
-- **Métricas Prometheus**: Todos os microsserviços Flask utilizam `prometheus-flask-exporter` na rota `/metrics`, expondo contadores de requisições por status (`flask_http_request_total`) e histogramas de latência (`flask_http_request_duration_seconds`).
-- **Dashboards no Grafana**: O Grafana (`http://localhost:3002`) consome as métricas raspadas pelo Prometheus (`http://localhost:9091`) e exibe painéis pré-provisionados de throughput, erros 4xx/5xx e percentis de tempo de resposta.
-
-```bash
-# Para reproduzir o teste de simulação de queda do Redis e transição 503/unhealthy:
-bash demo_observability.sh
-```
-
----
-
-### 🧪 Suíte de Testes Automatizados
-
-A suíte de testes unitários e de integração conta com **27 testes automatizados** cobrindo segurança, endpoints de API, paridade OpenAPI e observabilidade:
-
-```bash
-pytest tests/ -v
-```
-
-#### Arquivos de Teste
-- `tests/test_security.py`: Valida que `backend/database.py`, `auth_service/database.py`, `backend/app.py` e `auth_service/app.py` falham na inicialização caso variáveis de ambiente obrigatórias não existam.
-- `tests/test_swagger.py`: Garante paridade absoluta (100%) entre as rotas do Flask em cada microsserviço e suas respectivas especificações OpenAPI 3.0.
-- `tests/test_api.py`: Testa endpoints públicos, healthcheck consolidado e renderização do Swagger UI.
-- `tests/test_observability.py`: Valida respostas de liveness/readiness e comportamento de erro `503` quando o banco ou Redis estão indisponíveis.
-- `tests/conftest.py`: Disponibiliza fixtures de teste e isolamento de variáveis fictícias para execução de testes locais sem necessidade de banco de dados real ativo.
-
----
-
-### 📂 Estrutura do Repositório
-
-```
-tomhanks/
-├── .github/
-│   └── workflows/
-│       └── ci-cd.yml          # Pipeline CI/CD (Testes + Build GHCR + Deploy Portainer)
-├── auth_service/              # Microsserviço de autenticação e RBAC (Porta 3000)
-│   ├── app.py                 # Rotas de cadastro, login, logout, me e Swagger
-│   ├── database.py            # Conexão segura sem credenciais hardcoded
-│   ├── models.py              # Entidades User e ResetToken
-│   ├── swagger_spec.py        # Especificação OpenAPI 3.0 do auth-service
-│   └── requirements.txt
-├── backend/                   # Gateway da aplicação e catálogo (Porta 8080)
-│   ├── app.py                 # Proxy reverso, catálogo, endpoints e Swagger UI multi-spec
-│   ├── database.py            # Conexão segura com MariaDB
-│   ├── models.py              # Entidades Favorite e Comment
-│   ├── swagger_spec.py        # Especificação OpenAPI 3.0 do Gateway
-│   └── static/                # Artefatos compilados do frontend Angular
-├── log_service/               # Microsserviço de logs e auditoria (Porta 4000)
-│   ├── app.py                 # Gravação e consulta de auditoria no Redis Streams
-│   ├── swagger_spec.py        # Especificação OpenAPI 3.0 do log-service
-│   └── requirements.txt
-├── scripts/
-│   └── generate_openapi.py    # Script reproduzível de geração de openapi.json/yaml
-├── tests/
-│   ├── conftest.py            # Fixtures e ambiente isolado para pytest
-│   ├── test_api.py            # Testes funcionais do catálogo
-│   ├── test_observability.py  # Testes de observabilidade e readiness
-│   ├── test_security.py       # Testes de exigência de variáveis obrigatórias
-│   └── test_swagger.py        # Testes de paridade de rotas com a spec OpenAPI
-├── docker-compose.yml         # Orquestração completa dos 7 serviços e rede tomhanks-net
-├── Dockerfile                 # Container do gateway/catálogo
-├── Dockerfile.auth            # Container do auth-service
-├── Dockerfile.payment         # Container do payment-service
-├── Dockerfile.log             # Container do log-service
-├── Dockerfile.prometheus      # Container customizado do Prometheus
-├── Dockerfile.grafana         # Container customizado do Grafana com dashboards
-├── openapi.json               # Contrato OpenAPI 3.0 consolidado em formato JSON
-├── openapi.yaml               # Contrato OpenAPI 3.0 consolidado em formato YAML
-├── demo_observability.sh      # Script de teste de observabilidade e prova de falha
-├── demo_swagger.sh            # Script de validação da documentação OpenAPI
-└── requirements.txt           # Dependências do catálogo e testes
-```
-
----
-
-### 💳 Pagamentos, Assinatura e Entitlement (Stripe)
-
-#### Princípio da Fonte da Verdade
-A **Stripe é a única fonte da verdade**. O banco de dados local armazena estritamente o vínculo entre o `google_id` do usuário e o `stripe_customer_id` na tabela `stripe_customers`. Nenhum dado de cartão, validade, status de assinatura ou fatura é persistido localmente.
-
-#### Ordem de Precedência dos Métodos de Verificação
-O direito à assinatura (entitlement) utiliza uma estratégia em camadas para conciliar alta performance e consistência absoluta:
-1. **Cache de Curta Duração no Redis (`TTL = 300s / 5min`)**: Reduz latência e consultas excessivas à API da Stripe em navegações frequentes.
-2. **Webhooks da Stripe com Invalidação Proativa**: Quando eventos críticos ocorrem (`checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`), o cache Redis do usuário é imediatamente invalidado.
-3. **Consulta Direta à API da Stripe (`stripe.Subscription.list`)**: Caso a chave de cache tenha expirado ou não exista, ou em reconciliações onde o webhook ainda não foi entregue, o serviço consulta diretamente a API da Stripe em tempo real e reabastece o cache.
-
-#### Como Testar Webhooks Localmente com Stripe CLI
-
-1. Instale o [Stripe CLI](https://stripe.com/docs/stripe-cli):
-   ```bash
-   # Exemplo no Linux
-   curl -s https://packages.stripe.com/GPG-KEY-stripe-cli | sudo apt-key add -
-   echo "deb https://packages.stripe.com/stripe-cli-debian-local stable main" | sudo tee -a /etc/apt/sources.list.d/stripe.list
-   sudo apt-get update && sudo apt-get install stripe
-   ```
-2. Faça login na sua conta de testes:
-   ```bash
-   stripe login
-   ```
-3. Inicie o encaminhamento de webhooks para o container ou aplicação local:
-   ```bash
-   stripe listen --forward-to localhost:8080/api/payment/webhook
-   ```
-4. O terminal exibirá uma mensagem como:
-   `> Ready! Your webhook signing secret is whsec_xxxxxxxxxxxx`
-   Copie este segredo e configure na variável `STRIPE_WEBHOOK_SECRET` no seu arquivo `.env`.
-5. Em outro terminal, dispare eventos de teste para verificar a idempotência:
-   ```bash
-   stripe trigger checkout.session.completed
-   stripe trigger customer.subscription.updated
-   ```
-
----
-
-Disciplina ISW055 — Prof. Allan Siriani — [github.com/siriani](https://github.com/siriani)
+O OficinaOS nasceu como **fork com histórico completo** do catálogo de filmes usado nas Atividades 1 a 8 ([github.com/JoaoVSerrano/tomhanks](https://github.com/JoaoVSerrano/tomhanks)). A Atividade 10 trocou o domínio: saíram o catálogo de filmes, favoritos, comentários e a integração com a TMDB. A documentação do sistema antigo continua disponível, só para consulta, em [docs/historico-tomhanks.md](docs/historico-tomhanks.md) e [docs/historico-documentacao-tomhanks.md](docs/historico-documentacao-tomhanks.md); o backlog das Atividades 10 e 11 está em [docs/backlog-issues.md](docs/backlog-issues.md).

@@ -1,0 +1,24 @@
+flowchart LR
+    U["Navegador<br/>dono, mecânico, cliente"] -->|HTTPS| APP
+    STRIPE["Stripe<br/>checkout, portal e webhook"]
+    DB[("MariaDB externo<br/>banco da turma")]
+    subgraph VM ["VM Proxmox: Docker + Portainer, rede oficinaos-net (10.201.0.0/24)"]
+        APP["app: gateway Flask + Angular<br/>porta 8080, único serviço público"]
+        AUTH["auth-service<br/>porta 3000, interno"]
+        LOG["log-service<br/>porta 4000, interno"]
+        PAY["payment-service<br/>porta 5000, interno"]
+        REDIS[("Redis<br/>stream audit:logs")]
+        MINIO[("MinIO<br/>anexos privados e avatares")]
+        PROM["Prometheus :9091"] --> GRAF["Grafana :3002"]
+    end
+    APP --> AUTH
+    APP --> LOG
+    APP --> PAY
+    APP --> MINIO
+    APP --> DB
+    AUTH --> DB
+    PAY --> DB
+    LOG --> REDIS
+    PAY -->|API| STRIPE
+    STRIPE -->|webhook assinado| APP
+    PROM -->|/metrics| APP
