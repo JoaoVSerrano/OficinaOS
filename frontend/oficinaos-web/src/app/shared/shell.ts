@@ -1,5 +1,5 @@
-import { Component, computed, inject } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Api, PAPEL_LABEL } from '../core/api';
 
 @Component({
@@ -31,13 +31,34 @@ import { Api, PAPEL_LABEL } from '../core/api';
         </div>
       </div>
     </header>
-    <main class="container"><router-outlet /></main>
+    <main class="container">
+      @if (aviso(); as a) {
+        <div class="alert warn" role="alert">{{ a.texto }} <a [routerLink]="'/app/plano'">{{ a.link }}</a></div>
+      }
+      <router-outlet />
+    </main>
   `,
 })
-export class Shell {
+export class Shell implements OnInit {
   private api = inject(Api);
   private router = inject(Router);
   user = this.api.user;
+  private url = signal(this.router.url);
+  /** Aviso global: pagamento falhou ou a cota de OS do Free acabou. Na própria tela do plano ele já aparece. */
+  aviso = computed(() => {
+    const p = this.api.plano();
+    if (!p || this.url().startsWith('/app/plano')) return null;
+    if (p.inadimplente) return { texto: 'O último pagamento da assinatura falhou.', link: 'Ver plano e assinatura' };
+    const lim = p.limites.max_os_mes;
+    if (lim !== null && p.uso.os_mes >= lim) {
+      return { texto: `Você usou ${p.uso.os_mes} de ${lim} ordens de serviço deste mês no plano Free.`, link: 'Assinar o Pro' };
+    }
+    return null;
+  });
+  ngOnInit() {
+    this.router.events.subscribe((e) => { if (e instanceof NavigationEnd) this.url.set(e.urlAfterRedirects); });
+    this.api.carregarPlano();
+  }
   papelTexto = computed(() => PAPEL_LABEL[this.user()?.role ?? ''] ?? '');
   menu = computed(() => {
     const papel = this.user()?.role;
@@ -49,6 +70,7 @@ export class Shell {
       if (papel === 'dono' || papel === 'mecanico') itens.push({ link: '/app/clientes', texto: 'Clientes' });
       itens.push({ link: '/app/veiculos', texto: 'Veículos' });
       if (papel === 'dono') itens.push({ link: '/app/equipe', texto: 'Equipe' }, { link: '/app/auditoria', texto: 'Auditoria' });
+      if (papel === 'dono' || papel === 'mecanico') itens.push({ link: '/app/plano', texto: 'Plano' });
     }
     itens.push({ link: '/app/perfil', texto: 'Perfil' });
     return itens;

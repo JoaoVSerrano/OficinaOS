@@ -26,6 +26,14 @@ export interface Os {
   itens?: Item[];
 }
 
+export interface PlanoInfo {
+  plano: 'free' | 'pro'; nome: string; status: string; inadimplente: boolean;
+  periodo_fim: string | null; valor_mensal_centavos: number; preco_pro_centavos: number;
+  uso: { os_mes: number; mecanicos: number };
+  limites: { max_os_mes: number | null; max_mecanicos: number | null; max_anexos_por_os: number | null };
+  pode_gerenciar: boolean;
+}
+
 /** Erro de API já traduzido para a interface. */
 export class ApiError extends Error {
   constructor(message: string, public status: number, public corpo: any) { super(message); }
@@ -45,6 +53,8 @@ export class Api {
   private http = inject(HttpClient);
   /** undefined = ainda não carregou; null = sem sessão. */
   readonly user = signal<User | null | undefined>(undefined);
+  /** Plano da oficina (dono e mecânico); null = ainda não carregou ou sem acesso. */
+  readonly plano = signal<PlanoInfo | null>(null);
 
   private async call<T>(req: Promise<T>): Promise<T> {
     try {
@@ -69,6 +79,12 @@ export class Api {
       this.user.set(null);
       return null;
     }
+  }
+  async carregarPlano(): Promise<PlanoInfo | null> {
+    const papel = this.user()?.role;
+    if (papel !== 'dono' && papel !== 'mecanico') { this.plano.set(null); return null; }
+    try { this.plano.set(await this.get<PlanoInfo>('/api/plano')); } catch { this.plano.set(null); }
+    return this.plano();
   }
   async garantirUsuario(): Promise<User | null> {
     const atual = this.user();
