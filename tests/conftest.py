@@ -148,11 +148,16 @@ class FakeAuth:
 @pytest.fixture
 def gw(monkeypatch):
     """Gateway com SQLite em memória, auth simulado e log capturado."""
-    from backend import app as core, dominio, ordens
+    from backend import app as core, catalogo, dominio, financeiro, orcamentos, ordens
     from backend.database import Base
     _, scope = make_sqlite_scope(Base)
-    monkeypatch.setattr(dominio, 'session_scope', scope)
-    monkeypatch.setattr(ordens, 'session_scope', scope)
+    for modulo in (dominio, ordens, orcamentos, catalogo, financeiro):
+        monkeypatch.setattr(modulo, 'session_scope', scope)
+    # rate limit isolado por teste: sem Redis e com a memória local zerada
+    def _sem_redis():
+        raise ConnectionError('sem redis nos testes')
+    monkeypatch.setattr(core, 'get_redis', _sem_redis)
+    core._local_rate_limit.clear()
     auth = FakeAuth()
     eventos: list[dict] = []
     monkeypatch.setattr(core, '_forward_to_auth', auth)

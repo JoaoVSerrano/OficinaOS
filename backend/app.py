@@ -1059,6 +1059,15 @@ from backend.ordens import bp as ordens_bp  # noqa: E402
 app.register_blueprint(dominio_bp)
 app.register_blueprint(ordens_bp)
 
+# OficinaOS v2 (orçamento, catálogo, financeiro): um blueprint por módulo
+from backend.catalogo import bp as catalogo_bp  # noqa: E402
+from backend.financeiro import bp as financeiro_bp  # noqa: E402
+from backend.orcamentos import bp as orcamentos_bp  # noqa: E402
+
+app.register_blueprint(orcamentos_bp)
+app.register_blueprint(catalogo_bp)
+app.register_blueprint(financeiro_bp)
+
 
 _TODOS_OS_METODOS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 

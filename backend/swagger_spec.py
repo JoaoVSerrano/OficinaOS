@@ -681,11 +681,16 @@ OPENAPI_SPEC: dict[str, Any] = {
 }
 
 
-# Rotas do domínio da oficina (Atividade 10/11) vivem em swagger_dominio.py
-from backend.swagger_dominio import PATHS as _PATHS_DOMINIO, TAGS as _TAGS_DOMINIO  # noqa: E402
+# Rotas do domínio da oficina vivem em fragmentos (um arquivo por módulo de rotas).
+from backend import (swagger_catalogo, swagger_dominio, swagger_financeiro,  # noqa: E402
+                     swagger_orcamentos)
 
-OPENAPI_SPEC["paths"].update(_PATHS_DOMINIO)
-OPENAPI_SPEC["tags"].extend(_TAGS_DOMINIO)
+FRAGMENTOS = (swagger_dominio, swagger_orcamentos, swagger_catalogo, swagger_financeiro)
+for _frag in FRAGMENTOS:
+    _repetidos = set(_frag.PATHS) & set(OPENAPI_SPEC["paths"])
+    assert not _repetidos, f"path documentado duas vezes ({_frag.__name__}): {sorted(_repetidos)}"
+    OPENAPI_SPEC["paths"].update(_frag.PATHS)
+    OPENAPI_SPEC["tags"].extend(_frag.TAGS)
 
 
 def get_openapi_json() -> str:

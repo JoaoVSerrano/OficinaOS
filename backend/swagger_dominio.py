@@ -14,7 +14,8 @@ _MSG = {
     "200": "Sucesso", "201": "Criado", "400": "Dados inválidos",
     "401": "Não autenticado", "402": "Limite do plano atingido (codigo=limite_plano)",
     "403": "Papel sem permissão para esta ação", "404": "Registro não encontrado (ou de outra oficina)",
-    "409": "Conflito (regra de negócio)", "503": "Serviço dependente indisponível",
+    "409": "Conflito (regra de negócio)", "410": "Expirado (prazo de validade vencido)",
+    "429": "Muitas tentativas; aguarde um minuto", "503": "Serviço dependente indisponível",
 }
 
 
@@ -86,15 +87,15 @@ PATHS: dict[str, Any] = {
                    "dono, mecanico, cliente", "200", ("401", "403", "409")),
         "post": _op("Ordens de Serviço", "Abrir ordem de serviço", "dono, mecanico", "201",
                     ("400", "401", "402", "403", "404", "409", "503"),
-                    {"veiculo_id": "integer", "descricao": "string", "mecanico_id": "integer"},
+                    {"veiculo_id": "integer", "descricao": "string", "mecanico_id": "integer", "km_entrada": "integer"},
                     "No plano Free: 20 OS por mês (402 ao exceder)."),
     },
     "/api/os/{os_id}": {
         "get": _com_id(_op("Ordens de Serviço", "Detalhar OS com itens", "dono, mecanico (atribuída), cliente (própria)",
                            "200", ("401", "403", "404", "409")), "os_id"),
-        "put": _com_id(_op("Ordens de Serviço", "Editar descrição e mecânico da OS", "dono, mecanico (atribuída)", "200",
-                           ("400", "401", "403", "404", "409", "503"),
-                           {"descricao": "string", "mecanico_id": "integer"}), "os_id"),
+        "put": _com_id(_op("Ordens de Serviço", "Editar descrição, km de entrada e mecânico da OS",
+                           "dono, mecanico (atribuída)", "200", ("400", "401", "403", "404", "409", "503"),
+                           {"descricao": "string", "mecanico_id": "integer", "km_entrada": "integer"}), "os_id"),
         "delete": _com_id(_op("Ordens de Serviço", "Excluir OS (exclusão lógica; não devolve cota do plano)", "dono",
                               "200", ("401", "403", "404", "409")), "os_id"),
     },
