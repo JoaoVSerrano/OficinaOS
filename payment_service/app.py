@@ -14,7 +14,7 @@ from prometheus_flask_exporter import PrometheusMetrics
 from sqlalchemy import select
 
 from payment_service.database import session_scope, upgrade_database
-from payment_service.models import Assinatura, StripeCustomer
+from payment_service.models import Assinatura
 from payment_service.planos import plano_da_oficina
 from payment_service.webhooks import processar_evento
 
@@ -32,7 +32,6 @@ STRIPE_CANCEL_URL = os.getenv('STRIPE_CANCEL_URL', 'http://localhost:8080/?payme
 
 LOG_SERVICE_URL = os.getenv('LOG_SERVICE_URL', 'http://log-service:4000')
 REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
-CACHE_TTL = int(os.getenv('ENTITLEMENT_CACHE_TTL', '300'))  # 5 minutos
 
 START_TIME = time.time()
 _redis_pool: redis.ConnectionPool | None = None
@@ -56,7 +55,7 @@ def get_redis():
         )
     return redis.Redis(connection_pool=_redis_pool)
 
-def log_event(acao: str, google_id: str | None = None, detalhe: str = '') -> None:
+def log_event(acao: str, detalhe: str = '') -> None:
     try:
         _requests.post(
             f'{LOG_SERVICE_URL}/log',
@@ -141,82 +140,6 @@ def health():
         }
     }
     return jsonify(payload), status_code
-
-def _get_stripe_customer_id(google_id: str) -> str | None:
-    with session_scope() as db:
-        record = db.scalar(select(StripeCustomer).where(StripeCustomer.google_id == google_id))
-        return record.stripe_customer_id if record else None
-
-def _check_entitlement_from_stripe(stripe_customer_id: str) -> dict[str, Any]:
-    try:
-        subscriptions = stripe.Subscription.list(
-            customer=stripe_customer_id,
-            status='all',
-            limit=1,
-        )
-        if not subscriptions.data:
-            return {'has_premium': False, 'status': 'no_subscription', 'plan': None, 'period_end': None}
-        
-        sub = subscriptions.data[0]
-        active = sub.status in ('active', 'trialing')
-        plan_name = None
-        if sub.items.data:
-            price = sub.items.data[0].price
-            plan_name = price.get('nickname') or price.id
-        
-        period_end = None
-        if sub.current_period_end:
-            import datetime
-            period_end = datetime.datetime.fromtimestamp(
-                sub.current_period_end, tz=datetime.timezone.utc
-            ).isoformat()
-        
-        return {
-            'has_premium': active,
-            'status': sub.status,
-            'plan': plan_name,
-            'period_end': period_end,
-        }
-    except stripe.StripeError as exc:
-        app.logger.error('Erro Stripe ao verificar entitlement: %s', exc)
-        return {'has_premium': False, 'status': 'stripe_error', 'plan': None, 'period_end': None}
-
-@app.get('/entitlement')
-def entitlement():
-    err = require_internal_token()
-    if err:
-        return err
-    
-    google_id = request.args.get('google_id', '').strip()
-    if not google_id:
-        return json_error('Parâmetro google_id obrigatório.')
-    
-    if not stripe.api_key:
-        return jsonify({'has_premium': False, 'status': 'stripe_not_configured', 'plan': None, 'period_end': None})
-    
-    cache_key = f'entitlement:{google_id}'
-    try:
-        r = get_redis()
-        cached = r.get(cache_key)
-        if cached:
-            return jsonify(json.loads(cached))
-    except Exception as exc:
-        app.logger.warning('Falha no cache Redis (continuando sem cache): %s', exc)
-    
-    customer_id = _get_stripe_customer_id(google_id)
-    if not customer_id:
-        result = {'has_premium': False, 'status': 'no_customer', 'plan': None, 'period_end': None}
-        return jsonify(result)
-    
-    result = _check_entitlement_from_stripe(customer_id)
-    
-    try:
-        r = get_redis()
-        r.setex(cache_key, CACHE_TTL, json.dumps(result))
-    except Exception as exc:
-        app.logger.warning('Falha ao gravar cache Redis: %s', exc)
-    
-    return jsonify(result)
 
 @app.get('/internal/plano')
 def plano_interno():

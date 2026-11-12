@@ -152,8 +152,6 @@ services:
       STRIPE_PRICE_ID: ${STRIPE_PRICE_ID:-}
       STRIPE_SUCCESS_URL: ${STRIPE_SUCCESS_URL:-http://localhost:8080/?payment=success}
       STRIPE_CANCEL_URL: ${STRIPE_CANCEL_URL:-http://localhost:8080/?payment=cancel}
-      # Cache de entitlement — padrão 5 minutos
-      ENTITLEMENT_CACHE_TTL: ${ENTITLEMENT_CACHE_TTL:-300}
     depends_on:
       - redis
       - log-service

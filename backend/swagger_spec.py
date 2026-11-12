@@ -633,13 +633,6 @@ OPENAPI_SPEC: dict[str, Any] = {
                 "responses": {"200": {"description": "Evento processado"}}
             }
         },
-        "/api/premium/status": {
-            "get": {
-                "tags": ["Planos e Assinatura"],
-                "summary": "Status da assinatura (a Atividade 11 passa a ler o plano da oficina no banco)",
-                "responses": {"200": {"description": "Status retornado"}}
-            }
-        },
         "/api/admin/infra/health": {
             "get": {
                 "tags": ["Administração & Auditoria"],

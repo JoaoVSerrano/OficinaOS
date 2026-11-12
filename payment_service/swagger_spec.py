@@ -19,17 +19,6 @@ OPENAPI_SPEC: dict[str, Any] = {
                 }
             }
         },
-        "/entitlement": {
-            "get": {
-                "summary": "Verifica se o usuário tem assinatura ativa",
-                "parameters": [
-                    {"name": "google_id", "in": "query", "required": True, "schema": {"type": "string"}}
-                ],
-                "responses": {
-                    "200": {"description": "Status da assinatura retornado com sucesso."}
-                }
-            }
-        },
         "/internal/plano": {
             "get": {
                 "summary": "Plano da oficina, lido do banco (sem Stripe e sem cache)",

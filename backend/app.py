@@ -616,49 +616,6 @@ def payment_webhook():
         return json_error('Serviço de pagamentos indisponível.', 503)
 
 
-def _check_premium_entitlement() -> tuple[bool, dict[str, Any]]:
-    """Consulta o payment-service e retorna (has_premium, entitlement_data).
-
-    Administradores possuem acesso implícito ao conteúdo para fins de auditoria e suporte,
-    mas os dados reais de assinatura Stripe do usuário são preservados se existirem.
-    """
-    try:
-        resp_me = _forward_to_auth('GET', '/me')
-        if resp_me.status_code != 200:
-            return False, {}
-        user_data = resp_me.json().get('user', {})
-    except Exception:
-        return False, {}
-
-    is_admin = user_data.get('role') == 'admin'
-    google_id = user_data.get('google_id', '') if user_data else ''
-    stripe_entitlement: dict[str, Any] = {}
-
-    if google_id:
-        try:
-            resp = _forward_to_payment('GET', f'/entitlement?google_id={google_id}')
-            if resp.status_code == 200:
-                stripe_entitlement = resp.json()
-        except Exception as exc:
-            app.logger.warning('payment-service indisponível em entitlement: %s', exc)
-
-    if stripe_entitlement.get('has_premium'):
-        return True, stripe_entitlement
-
-    if is_admin:
-        # Administrador tem acesso administrativo implícito
-        return True, {
-            'has_premium': True,
-            'status': 'admin_access',
-            'plan': 'Acesso Administrativo (Admin)',
-            'is_admin': True,
-            'stripe_status': stripe_entitlement.get('status', 'none'),
-            'period_end': stripe_entitlement.get('period_end'),
-        }
-
-    return False, stripe_entitlement or {'has_premium': False, 'status': 'no_subscription'}
-
-
 # ---------------------------------------------------------------------------
 # Plano e assinatura (a Atividade 11 reescreve esta seção: plano por oficina, lido do banco)
 # ---------------------------------------------------------------------------
@@ -678,20 +635,6 @@ def payment_price():
         'currency': 'brl',
         'formatted_price': 'R$ 49,00',
         'interval': 'mês',
-    })
-
-
-@app.get('/api/premium/status')
-def premium_status():
-    """Retorna o status de assinatura premium do usuário autenticado."""
-    user_id, err = require_login()
-    if err:
-        return err
-
-    has_premium, entitlement = _check_premium_entitlement()
-    return jsonify({
-        'has_premium': has_premium,
-        'entitlement': entitlement,
     })
 
 
