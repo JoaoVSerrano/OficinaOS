@@ -49,3 +49,41 @@ def test_todas_as_tabelas_do_dominio_tem_escopo_de_oficina():
     veic = Base.metadata.tables['veiculos']
     uniques = [sorted(c.name for c in u.columns) for u in veic.constraints if u.__class__.__name__ == 'UniqueConstraint']
     assert ['oficina_id', 'placa'] in uniques
+
+
+# --- 0003_oficina_v2: orçamento, notas, catálogo, pagamentos, km --------------
+
+NOVAS = ('orcamentos', 'notas_os', 'catalogo_itens', 'pagamentos_os')
+
+
+def _sql_0003() -> str:
+    cfg = Config(str(ROOT / 'alembic.ini'))
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        command.upgrade(cfg, '0002_dominio_oficina:0003_oficina_v2', sql=True)
+    return buf.getvalue()
+
+
+def test_migracao_0003_so_adiciona_tabelas_e_colunas():
+    sql = _sql_0003()
+    for t in NOVAS:
+        assert f'CREATE TABLE {t}' in sql, t
+    assert 'ADD COLUMN km_entrada' in sql and 'ADD COLUMN entregue_em' in sql
+    assert 'DROP' not in sql.upper().replace('DROP_', '')
+    assert 'uniq_orcamento_versao' in sql and 'token_hash' in sql
+
+
+def test_tabelas_novas_tem_escopo_de_oficina():
+    from backend.models import Base
+    assert 'oficina_id' in Base.metadata.tables['catalogo_itens'].c
+    for nome in ('orcamentos', 'notas_os', 'pagamentos_os'):
+        assert 'os_id' in Base.metadata.tables[nome].c, nome
+    assert {'km_entrada', 'entregue_em'} <= set(Base.metadata.tables['ordens_servico'].c.keys())
+
+
+def test_escopo_alcanca_filhos_da_os_pela_oficina():
+    from backend import escopo
+    from backend.models import NotaOS, Orcamento, PagamentoOS
+    for model in (Orcamento, NotaOS, PagamentoOS):
+        sql = str(escopo.consulta(model, 1))
+        assert 'ordens_servico.oficina_id' in sql and 'excluida_em' in sql, model

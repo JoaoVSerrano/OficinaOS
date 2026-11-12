@@ -10,7 +10,10 @@ from typing import Any
 
 from sqlalchemy import Select, select
 
-from backend.models import AnexoOS, ItemOS, OrdemServico
+from backend.models import AnexoOS, ItemOS, NotaOS, Orcamento, OrdemServico, PagamentoOS
+
+# tabelas sem oficina_id próprio: chegam à oficina pela OS
+FILHOS_DA_OS = (ItemOS, AnexoOS, Orcamento, NotaOS, PagamentoOS)
 
 
 class SemOficina(Exception):
@@ -20,8 +23,7 @@ class SemOficina(Exception):
 def consulta(model: Any, oficina_id: int | None) -> Select:
     if not oficina_id:
         raise SemOficina(f'consulta de {getattr(model, "__tablename__", model)} sem oficina_id')
-    if model in (ItemOS, AnexoOS):
-        # sem oficina_id próprio: chega à oficina pela OS
+    if model in FILHOS_DA_OS:
         return select(model).join(OrdemServico, OrdemServico.id == model.os_id).where(
             OrdemServico.oficina_id == oficina_id, OrdemServico.excluida_em.is_(None)
         )
