@@ -286,36 +286,36 @@ def create_checkout():
 
 @app.post('/portal')
 def create_portal():
+    """Billing Portal da Stripe para o customer da oficina (cancelamento imediato é configurado no painel)."""
     err = require_internal_token()
     if err:
         return err
-    
+
     stripe_secret = os.getenv('STRIPE_SECRET_KEY') or stripe.api_key
     if not stripe_secret:
         return json_error('Pagamentos não configurados neste servidor.', 503)
     stripe.api_key = stripe_secret
-    
+
     payload = request.get_json(silent=True) or {}
-    google_id = str(payload.get('google_id', '')).strip()
-    
-    if not google_id:
-        return json_error('google_id obrigatório.')
-    
-    customer_id = _get_stripe_customer_id(google_id)
+    try:
+        oficina_id = int(payload.get('oficina_id'))
+    except (TypeError, ValueError):
+        return json_error('oficina_id obrigatório.')
+
+    with session_scope() as db:
+        a = db.scalar(select(Assinatura).where(Assinatura.oficina_id == oficina_id))
+        customer_id = a.stripe_customer_id if a else None
     if not customer_id:
-        return json_error('Usuário não possui assinatura ativa.', 404)
-    
+        return json_error('Esta oficina ainda não tem assinatura. Assine o Pro em Plano e assinatura.', 409)
+
     frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:8080')
     try:
-        portal_session = stripe.billing_portal.Session.create(
-            customer=customer_id,
-            return_url=frontend_url,
-        )
+        portal_session = stripe.billing_portal.Session.create(customer=customer_id, return_url=frontend_url)
     except stripe.StripeError as exc:
         app.logger.error('Erro ao criar portal session: %s', exc)
         return json_error('Falha ao abrir portal de assinatura.', 502)
-    
-    log_event('portal_aberto', google_id=google_id)
+
+    log_event('portal_aberto', detalhe=f'oficina_id={oficina_id}')
     return jsonify({'portal_url': portal_session.url})
 
 @app.post('/webhook')

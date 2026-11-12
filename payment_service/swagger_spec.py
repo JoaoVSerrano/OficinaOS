@@ -63,14 +63,15 @@ OPENAPI_SPEC: dict[str, Any] = {
                         "application/json": {
                             "schema": {
                                 "type": "object",
-                                "properties": {"google_id": {"type": "string"}},
-                                "required": ["google_id"]
+                                "properties": {"oficina_id": {"type": "integer"}},
+                                "required": ["oficina_id"]
                             }
                         }
                     }
                 },
                 "responses": {
-                    "200": {"description": "Portal URL retornado."}
+                    "200": {"description": "Portal URL retornado."},
+                    "409": {"description": "Oficina sem assinatura (sem customer na Stripe)."}
                 }
             }
         },

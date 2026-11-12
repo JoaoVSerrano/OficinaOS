@@ -598,29 +598,6 @@ def payment_config():
     })
 
 
-@app.post('/api/payment/portal')
-def payment_portal():
-    """Abre o Stripe Customer Portal para o usuário gerenciar ou cancelar."""
-    try:
-        resp = _forward_to_auth('GET', '/me')
-        if resp.status_code != 200:
-            return json_error('Faça login para continuar.', 401)
-        user_data = resp.json().get('user', {})
-    except Exception:
-        return json_error('Serviço de autenticação indisponível.', 503)
-
-    google_id = user_data.get('google_id', '') if user_data else ''
-    if not google_id:
-        return json_error('Login com Google obrigatório para gerenciar assinatura.', 403)
-
-    try:
-        resp = _forward_to_payment('POST', '/portal', json={'google_id': google_id})
-        return jsonify(resp.json()), resp.status_code
-    except requests.RequestException as exc:
-        app.logger.error('payment-service indisponível em portal: %s', exc)
-        return json_error('Serviço de pagamentos indisponível.', 503)
-
-
 @app.post('/api/payment/webhook')
 def payment_webhook():
     """Repassa webhooks da Stripe ao payment-service (preserva payload e headers)."""

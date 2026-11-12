@@ -566,3 +566,19 @@ def payment_checkout():
     if status == 201:
         log_negocio('assinatura.checkout_iniciado', user, 'assinatura', user['oficina_id'])
     return jsonify(corpo), status
+
+
+@bp.post('/api/payment/portal')
+@require_roles('dono')
+def payment_portal():
+    core = _core()
+    user = g.user
+    try:
+        resp = core._forward_to_payment('POST', '/portal', json={'oficina_id': user['oficina_id']})
+        corpo, status = resp.json(), resp.status_code
+    except requests.RequestException as exc:
+        core.app.logger.error('payment-service indisponível em portal: %s', exc)
+        return erro('Serviço de pagamentos indisponível.', 503)
+    if status == 200:
+        log_negocio('assinatura.portal_aberto', user, 'assinatura', user['oficina_id'])
+    return jsonify(corpo), status
