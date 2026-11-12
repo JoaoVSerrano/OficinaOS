@@ -27,7 +27,7 @@ O push na `main` dispara o CI, que aciona o redeploy; ao subir, o gateway roda a
   - remover `TMDB_API_KEY` e `TMDB_LANGUAGE`;
   - `MINIO_BUCKET_NAME`: o padrão agora é `oficinaos-avatars`. Para **manter as fotos de perfil já enviadas**, deixe `MINIO_BUCKET_NAME=tomhanks-avatars` (e ajuste `MINIO_PUBLIC_URL` se a usar); para começar limpo, apague a variável;
   - `MINIO_ANEXOS_BUCKET` é opcional (padrão `oficinaos-anexos`, bucket privado criado sozinho);
-  - o resto fica igual. Atualize `STRIPE_PRICE_ID` só na Atividade 11.
+  - o resto fica igual; as variáveis da Stripe estão na seção 4.
 - [ ] **Pull and redeploy** e conferir que **todos** os containers ficam `healthy` (o CI também confere o `/health`).
 
 ## 3. Verificação no ar (eu faço depois que você avisar)
@@ -48,6 +48,10 @@ Se `sk_live_`/`pk_live_` aparecer em qualquer lugar, **pare**.
 - [ ] **Customer Portal** (Settings → Billing → Customer portal): permitir **cancelamento imediato** e atualização do cartão.
 - [ ] **Webhook** em `https://<subdominio>/api/payment/webhook` com os eventos `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted` e `invoice.payment_failed`; o segredo `whsec_...` vai para `STRIPE_WEBHOOK_SECRET` na stack.
 - [ ] `STRIPE_SECRET_KEY` e `STRIPE_PUBLISHABLE_KEY` de **teste** na stack.
+- [ ] URLs de retorno do checkout na stack, com o **domínio de produção**: `STRIPE_SUCCESS_URL=https://<subdominio>/app/plano?assinatura=ok` e `STRIPE_CANCEL_URL=https://<subdominio>/app/plano?assinatura=cancelada`. Sem isso o padrão aponta para `localhost`.
+- [ ] `FRONTEND_URL=https://<subdominio>` (é para onde o Billing Portal devolve o usuário).
+- [ ] `PRO_VALOR_CENTAVOS` é opcional (reserva, padrão 4900): o valor mensal vem do evento da Stripe.
+- [ ] Depois do redeploy, o payment-service cria a tabela `assinaturas` sozinho (migração `0002_assinaturas`); nada destrutivo.
 
 ## 5. Prints que precisam de você (login em serviços de terceiros)
 

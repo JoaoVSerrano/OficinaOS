@@ -206,7 +206,32 @@ O papel e a oficina vêm sempre do `auth-service` (rota `/me`), nunca do corpo o
 | Mecânicos | 1 | sem limite |
 | Anexos por OS | 3 | sem limite |
 
-Ao passar do limite a API responde **402** com `{erro, codigo: "limite_plano", limite, uso, plano, como_liberar}` e registra `plano.limite_atingido`. A assinatura Pro (Stripe, **somente modo de teste**) é a Atividade 11.
+Ao passar do limite a API responde **402** com `{erro, codigo: "limite_plano", limite, uso, plano, como_liberar}` e registra `plano.limite_atingido`. A decisão usa o plano **lido do banco a cada requisição** (nunca a Stripe nem cache); se o payment-service estiver fora do ar vale o Free.
+
+### Assinatura Pro (Atividade 11, Stripe **somente em modo de teste**)
+
+**Adaptação ao tenant:** aqui quem assina é a **oficina**, não o usuário. O customer da Stripe e a assinatura ficam na tabela `assinaturas` (uma linha por oficina, `oficina_id` único), ligados ao `usuario_id` do dono que assinou. Oficina sem linha é Free.
+
+**Fluxo (roteiro do professor):**
+1. Cria a conta como dono: a oficina nasce **Free**.
+2. Chega a 20 OS no mês: a 21ª é recusada (402) com a mensagem do plano e o botão **Assinar Pro**.
+3. Em **Plano e assinatura** (`/app/plano`) o dono clica em *Assinar Pro*: o gateway cria o Checkout (`client_reference_id` e metadata levam a oficina) e redireciona para a Stripe. Cartão de teste: `4242 4242 4242 4242`, qualquer data futura e CVC.
+4. Na volta a tela mostra “processando…”: o plano **só muda quando o webhook chega**, nunca pelo retorno do navegador.
+5. *Gerenciar assinatura* abre o Billing Portal; o cancelamento imediato está habilitado no painel da Stripe para o teste. O webhook `customer.subscription.deleted` devolve a oficina ao Free.
+6. O admin da plataforma vê em `/app/admin` as oficinas e usuários por plano, as assinaturas ativas, o **MRR de teste** (soma mensal das assinaturas ativas) e os últimos eventos.
+
+**Webhooks** (`POST /api/payment/webhook`, assinatura `Stripe-Signature` sempre validada; inválida → 400): `checkout.session.completed` (salva customer e subscription e muda para Pro), `customer.subscription.updated` (plano, status, valor e renovação), `customer.subscription.deleted` (volta ao Free) e `invoice.payment_failed` (marca inadimplência e mostra o aviso). Cada evento é aplicado numa **única transação** com o registro de idempotência: evento repetido não duplica efeito, evento fora de ordem não desfaz o mais novo e, se o efeito falha, a resposta é 500 e a Stripe reenvia.
+
+**Como testar o webhook localmente** (com a Stripe CLI e chaves `sk_test_`/`pk_test_` no `.env`):
+
+```bash
+stripe login
+stripe listen --forward-to localhost:8080/api/payment/webhook   # copie o whsec_... para STRIPE_WEBHOOK_SECRET
+stripe trigger invoice.payment_failed                            # ou conclua um checkout real com o cartão 4242
+python scripts/cenarios/ativ11.py --base-url http://localhost:8080
+```
+
+Sem a Stripe CLI, os testes automatizados (`pytest tests/test_webhooks_assinatura.py`) assinam payloads com um segredo fictício e cobrem os quatro eventos.
 
 ## 13. Como executar localmente
 
@@ -229,7 +254,7 @@ O banco do domínio é recriável a partir do repositório. As tabelas novas (`o
 
 ## 15. Variáveis de ambiente
 
-Somente **nomes** (os valores ficam no `.env` local ou na stack do Portainer): consulte [`.env.example`](.env.example). Obrigatórias: `DB_*`, `FLASK_SECRET_KEY`, `AUTH_SECRET_KEY`, `INTERNAL_TOKEN`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`. Opcionais: Google OAuth, SMTP, Stripe, `MINIO_BUCKET_NAME` (avatares), `MINIO_ANEXOS_BUCKET` (anexos privados) e Grafana.
+Somente **nomes** (os valores ficam no `.env` local ou na stack do Portainer): consulte [`.env.example`](.env.example). Obrigatórias: `DB_*`, `FLASK_SECRET_KEY`, `AUTH_SECRET_KEY`, `INTERNAL_TOKEN`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`. Opcionais: Google OAuth, SMTP, Stripe (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`, `STRIPE_SUCCESS_URL`, `STRIPE_CANCEL_URL`, `PRO_VALOR_CENTAVOS`), `MINIO_BUCKET_NAME` (avatares), `MINIO_ANEXOS_BUCKET` (anexos privados) e Grafana.
 
 ## 16. Qualidade: testes, Swagger e CI/CD
 
