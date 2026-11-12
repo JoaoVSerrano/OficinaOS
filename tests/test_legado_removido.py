@@ -12,7 +12,8 @@ PADRAO = re.compile(r'tom ?hanks|tomhanks|tmdb|filme|movie', re.I)
 # Documentos históricos e a revisão baseline podem citar a origem do projeto.
 EXCECOES = ('docs/', 'README.md', 'DOCUMENTACAO.md', 'CLAUDE.md', 'backend/migrations/versions/0001_', 'backend/static/',
             'frontend/', 'openapi.', 'tests/test_legado_removido.py', 'tests/test_migracoes.py',
-            '.env.example', '.github/', 'docker-compose', 'grafana/', 'demo_')
+            '.env.example', '.github/', 'docker-compose', 'grafana/', 'demo_',
+            'scripts/cenarios/')   # o cenário de aceite procura essas palavras de propósito
 
 
 @pytest.mark.parametrize('metodo,url', [
