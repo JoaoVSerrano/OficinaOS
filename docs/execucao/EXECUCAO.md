@@ -705,14 +705,14 @@ mkdir -p .evidencias/paginas && pdftoppm -r 60 -png docs/P2_ISW055_Joao_Serrano.
 
 **Atividade 10**
 - [ ] A stack aponta para o OficinaOS e os containers estão saudáveis (print).
-- [ ] 3 ou mais tabelas do domínio com FK + `db/001_dominio.sql` + `db/002_seed.sql` versionados.
-- [ ] CRUD de OS na API e nas telas; Swagger atualizado e paridade verde.
+- [x] 3 ou mais tabelas do domínio com FK + `db/001_dominio.sql` + `db/002_seed.sql` versionados.
+- [x] CRUD de OS na API e nas telas; Swagger atualizado e paridade verde.
 - [ ] Papéis `admin`/`dono`/`mecanico`/`cliente`; ação proibida → 403 direto na API (teste + print).
 - [ ] Outra oficina → 404 (teste + print).
 - [ ] Eventos de negócio no log com quem e quando (print).
 - [ ] Foto da OS no MinIO, ligada à OS e sem leitura pública (print).
 - [ ] Landing pública com "Criar conta grátis" (print).
-- [ ] `git grep` do legado vazio; TMDB fora do código, do compose, do `.env.example` e da stack.
+- [x] `git grep` do legado vazio; TMDB fora do código, do compose, do `.env.example` e da stack. (código, compose e `.env.example` prontos; falta remover da stack no Portainer)
 - [ ] README com a URL no ar e o diagrama atualizado; menção a github.com/siriani.
 - [ ] Issue `Entrega — Seu negócio no ar` aberta, com data e hora registradas.
 
@@ -733,7 +733,7 @@ mkdir -p .evidencias/paginas && pdftoppm -r 60 -png docs/P2_ISW055_Joao_Serrano.
 - [ ] Link do PDF no README; primeiro commit do PDF até 13/11/2026 23:59; issue `Entrega — P2` aberta.
 
 **Sempre**
-- [ ] `pytest` verde localmente e no CI; commits pequenos em Conventional Commits.
+- [ ] `pytest` verde localmente (152 testes) e no CI; commits pequenos em Conventional Commits. (local: ok; falta o CI após o push)
 
 ---
 
