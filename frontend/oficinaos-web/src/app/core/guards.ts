@@ -14,17 +14,23 @@ export const autenticado: CanActivateFn = async () => {
 
 /** Só login (usado no onboarding, onde ainda não há oficina). */
 export const soLogin: CanActivateFn = async () => {
-  const u = await inject(Api).garantirUsuario();
-  return u ? true : inject(Router).createUrlTree(['/entrar']);
+  const api = inject(Api);
+  const router = inject(Router);   // inject() só funciona antes do primeiro await
+  const u = await api.garantirUsuario();
+  return u ? true : router.createUrlTree(['/entrar']);
 };
 
 export const papel = (...permitidos: Papel[]): CanActivateFn => async () => {
-  const u = await inject(Api).garantirUsuario();
-  return u && permitidos.includes(u.role) ? true : inject(Router).createUrlTree(['/app/os']);
+  const api = inject(Api);
+  const router = inject(Router);
+  const u = await api.garantirUsuario();
+  return u && permitidos.includes(u.role) ? true : router.createUrlTree(['/app/os']);
 };
 
 /** Página inicial do app depende do papel: admin não tem OS, vai para a auditoria. */
 export const inicio: CanActivateFn = async () => {
-  const u = await inject(Api).garantirUsuario();
-  return inject(Router).createUrlTree([u?.role === 'admin' ? '/app/auditoria' : '/app/os']);
+  const api = inject(Api);
+  const router = inject(Router);
+  const u = await api.garantirUsuario();
+  return router.createUrlTree([u?.role === 'admin' ? '/app/auditoria' : '/app/os']);
 };
