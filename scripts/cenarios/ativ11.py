@@ -169,6 +169,12 @@ def executar(base: str, admin_email: str | None, admin_senha: str | None, segred
         logs = chamar(adm, 'GET', '/api/admin/logs', params={'oficina_id': oficina_id, 'n': 300}).json().get('logs', [])
         acoes = {e['acao'] for e in logs}
         rel.passo('7. O log registra plano.limite_atingido', 'plano.limite_atingido' in acoes, str(sorted(acoes))[:160])
+        if segredo:
+            rel.passo('7. Os eventos da assinatura aparecem na auditoria DESTA oficina (ativada, pagamento falhou, cancelada)',
+                      {'assinatura.ativada', 'assinatura.pagamento_falhou', 'assinatura.cancelada'} <= acoes, str(sorted(acoes))[:200])
+            rel.passo('7. Cada evento da assinatura diz a oficina e o recurso',
+                      all(e.get('oficina_id') == str(oficina_id) and e.get('recurso') == 'assinatura'
+                          for e in logs if e['acao'].startswith('assinatura.') and e['acao'] != 'assinatura.checkout_iniciado'))
     else:
         rel.pular('7. Eventos de plano no log', 'informe --admin-email e --admin-password')
     return rel.concluir()

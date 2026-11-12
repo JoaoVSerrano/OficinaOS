@@ -55,14 +55,15 @@ def get_redis():
         )
     return redis.Redis(connection_pool=_redis_pool)
 
-def log_event(acao: str, detalhe: str = '') -> None:
+def log_event(acao: str, detalhe: str = '', oficina_id: int | None = None) -> None:
+    """Auditoria no log-service. Eventos de negócio (`assinatura.*`) levam oficina, papel e recurso,
+    como os do gateway; os técnicos mantêm o prefixo `payment:`."""
+    corpo: dict[str, Any] = {'usuario_id': None, 'acao': acao if '.' in acao else f'payment:{acao}',
+                             'detalhe': detalhe, 'ip': ''}
+    if oficina_id is not None:
+        corpo.update({'oficina_id': oficina_id, 'papel': 'sistema', 'recurso': 'assinatura', 'recurso_id': oficina_id})
     try:
-        _requests.post(
-            f'{LOG_SERVICE_URL}/log',
-            json={'usuario_id': None, 'acao': f'payment:{acao}', 'detalhe': detalhe, 'ip': ''},
-            headers={'X-Internal-Token': INTERNAL_TOKEN},
-            timeout=3,
-        )
+        _requests.post(f'{LOG_SERVICE_URL}/log', json=corpo, headers={'X-Internal-Token': INTERNAL_TOKEN}, timeout=3)
     except Exception as exc:
         app.logger.warning('log-service indisponível (acao=%s): %s', acao, exc)
 
@@ -235,7 +236,7 @@ def create_checkout():
         app.logger.error('Erro ao criar checkout session: %s', exc)
         return json_error('Falha ao criar sessão de pagamento.', 502)
 
-    log_event('checkout_iniciado', detalhe=f'oficina_id={oficina_id} session_id={checkout_session.id}')
+    log_event('checkout_iniciado', detalhe=f'session_id={checkout_session.id}', oficina_id=oficina_id)
     return jsonify({'checkout_url': checkout_session.url}), 201
 
 @app.post('/portal')
@@ -269,7 +270,7 @@ def create_portal():
         app.logger.error('Erro ao criar portal session: %s', exc)
         return json_error('Falha ao abrir portal de assinatura.', 502)
 
-    log_event('portal_aberto', detalhe=f'oficina_id={oficina_id}')
+    log_event('portal_aberto', oficina_id=oficina_id)
     return jsonify({'portal_url': portal_session.url})
 
 @app.post('/webhook')
@@ -298,7 +299,7 @@ def stripe_webhook():
 
     try:
         with session_scope() as db:
-            novo, negocio = processar_evento(db, event)
+            novo, negocio, oficina_id = processar_evento(db, event)
     except Exception:
         app.logger.exception('Falha ao processar webhook %s (%s).', event_id, event_type)
         return json_error('Falha ao processar o evento.', 500)
@@ -307,7 +308,8 @@ def stripe_webhook():
         app.logger.info('Evento webhook %s já processado — ignorado.', event_id)
         return jsonify({'ok': True, 'duplicate': True})
 
-    log_event(negocio or 'webhook_processado', detalhe=f'event_type={event_type} event_id={event_id}')
+    log_event(negocio or 'webhook_processado', detalhe=f'event_type={event_type} event_id={event_id}',
+              oficina_id=oficina_id)
     return jsonify({'ok': True})
 
 @app.get('/plan-details')

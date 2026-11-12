@@ -56,13 +56,13 @@ def _atrasado(a: Assinatura, criado_em: int) -> bool:
     return a.ultimo_evento_em is not None and criado_em < a.ultimo_evento_em
 
 
-def _aplicar(db: Session, tipo: str, obj: dict, criado_em: int) -> str | None:
-    """Devolve o nome do evento de negócio a registrar no log (ou None)."""
+def _aplicar(db: Session, tipo: str, obj: dict, criado_em: int) -> tuple[str | None, int | None]:
+    """Devolve (evento de negócio a registrar no log, oficina afetada); (None, None) se nada mudou."""
     if tipo == 'checkout.session.completed':
         meta = obj.get('metadata') or {}
         oficina_id = _int(obj.get('client_reference_id')) or _int(meta.get('oficina_id'))
         if oficina_id is None:
-            return None
+            return None, None
         a = db.scalar(select(Assinatura).where(Assinatura.oficina_id == oficina_id))
         if a is None:
             a = Assinatura(oficina_id=oficina_id)
@@ -71,18 +71,18 @@ def _aplicar(db: Session, tipo: str, obj: dict, criado_em: int) -> str | None:
         a.stripe_subscription_id = obj.get('subscription') or a.stripe_subscription_id
         a.usuario_id = _int(meta.get('usuario_id')) or a.usuario_id
         if _atrasado(a, criado_em):
-            return None
+            return None, oficina_id
         a.plano, a.status = 'pro', 'active'
         total = _int(obj.get('amount_total'))
         a.valor_mensal_centavos = total if total is not None else VALOR_PRO_PADRAO_CENTAVOS
         a.moeda = obj.get('currency') or 'brl'
         a.inadimplente = False
         a.ultimo_evento_em = criado_em
-        return 'assinatura.ativada'
+        return 'assinatura.ativada', oficina_id
 
     a = _localizar(db, obj)
     if a is None or _atrasado(a, criado_em):
-        return None
+        return None, (a.oficina_id if a else None)
 
     if tipo == 'customer.subscription.updated':
         status = obj.get('status') or a.status
@@ -107,21 +107,21 @@ def _aplicar(db: Session, tipo: str, obj: dict, criado_em: int) -> str | None:
         a.inadimplente = True
         evento = 'assinatura.pagamento_falhou'
     else:
-        return None
+        return None, None
     a.ultimo_evento_em = criado_em
-    return evento
+    return evento, a.oficina_id
 
 
-def processar_evento(db: Session, event) -> tuple[bool, str | None]:
-    """Aplica o evento e o marca como processado. Retorna (novo, evento_de_negocio).
+def processar_evento(db: Session, event) -> tuple[bool, str | None, int | None]:
+    """Aplica o evento e o marca como processado. Retorna (novo, evento_de_negocio, oficina_id).
 
     Não faz commit: quem chama controla a transação (rollback desfaz tudo).
     """
     existente = db.scalar(select(ProcessedWebhookEvent)
                           .where(ProcessedWebhookEvent.stripe_event_id == event['id']))
     if existente:
-        return False, None
-    negocio = _aplicar(db, event['type'], event['data']['object'], int(event.get('created') or 0))
+        return False, None, None
+    negocio, oficina_id = _aplicar(db, event['type'], event['data']['object'], int(event.get('created') or 0))
     db.add(ProcessedWebhookEvent(stripe_event_id=event['id'], event_type=event['type']))
     db.flush()
-    return True, negocio
+    return True, negocio, oficina_id
