@@ -156,3 +156,51 @@ def gw(monkeypatch):
         def como(uid):
             return {'headers': {'X-Test-User': str(uid)}}
         yield SimpleNamespace(client=c, auth=auth, eventos=eventos, como=como, scope=scope)
+
+
+# ---------------------------------------------------------------------------
+# payment-service com SQLite em memória (webhooks e checkout)
+# ---------------------------------------------------------------------------
+from contextlib import contextmanager  # noqa: E402
+from unittest.mock import patch  # noqa: E402
+
+from sqlalchemy.orm import Session  # noqa: E402
+WEBHOOK_SECRET = 'whsec_teste_unitario'
+
+
+@pytest.fixture
+def pay_engine():
+    from payment_service.database import Base as PayBase
+    import payment_service.models  # noqa: F401
+    eng = create_engine('sqlite://', poolclass=StaticPool, connect_args={'check_same_thread': False})
+    PayBase.metadata.create_all(eng)
+    return eng
+
+
+@pytest.fixture
+def pay_client(pay_engine):
+    @contextmanager
+    def scope():
+        s = Session(pay_engine, expire_on_commit=False)
+        try:
+            yield s
+            s.commit()
+        except Exception:
+            s.rollback()
+            raise
+        finally:
+            s.close()
+
+    with (
+        patch('payment_service.database._check_required_env'),
+        patch('payment_service.app.session_scope', scope),
+        patch('payment_service.app.upgrade_database'),
+        patch('payment_service.app.log_event'),
+        patch.dict('os.environ', {'STRIPE_WEBHOOK_SECRET': WEBHOOK_SECRET}),
+    ):
+        from payment_service.app import app
+        app.config['TESTING'] = True
+        with app.test_client() as c:
+            yield c
+
+

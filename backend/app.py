@@ -598,41 +598,6 @@ def payment_config():
     })
 
 
-@app.post('/api/payment/checkout')
-def payment_checkout():
-    """Inicia Stripe Checkout Session. Requer autenticação e google_id."""
-    user_data, err = require_role('usuario')
-    if err:
-        # Tenta pegar usuário mesmo sem role específica (inclusive admin testando fluxo)
-        try:
-            resp = _forward_to_auth('GET', '/me')
-            if resp.status_code != 200:
-                return json_error('Faça login para assinar.', 401)
-            user_data = resp.json().get('user', {})
-        except Exception:
-            return json_error('Serviço de autenticação indisponível.', 503)
-
-    user_id = user_data.get('id', 'anon')
-    if not check_rate_limit(f'checkout:{user_id}', max_requests=5, window_seconds=60):
-        return json_error('Muitas tentativas de checkout. Por favor, aguarde um minuto.', 429)
-
-    google_id = user_data.get('google_id', '') if user_data else ''
-    email = user_data.get('email', '') if user_data else ''
-
-    if not google_id:
-        return json_error(
-            'Login com Google obrigatório para assinatura premium. '
-            'Faça login com Google e tente novamente.', 403
-        )
-
-    try:
-        resp = _forward_to_payment('POST', '/checkout', json={'google_id': google_id, 'email': email})
-        return jsonify(resp.json()), resp.status_code
-    except requests.RequestException as exc:
-        app.logger.error('payment-service indisponível em checkout: %s', exc)
-        return json_error('Serviço de pagamentos indisponível.', 503)
-
-
 @app.post('/api/payment/portal')
 def payment_portal():
     """Abre o Stripe Customer Portal para o usuário gerenciar ou cancelar."""

@@ -32,7 +32,7 @@ OPENAPI_SPEC: dict[str, Any] = {
         },
         "/checkout": {
             "post": {
-                "summary": "Inicia checkout na Stripe",
+                "summary": "Inicia o checkout da assinatura Pro da oficina (customer reutilizado; 409 se já é Pro)",
                 "requestBody": {
                     "required": True,
                     "content": {
@@ -40,10 +40,11 @@ OPENAPI_SPEC: dict[str, Any] = {
                             "schema": {
                                 "type": "object",
                                 "properties": {
-                                    "google_id": {"type": "string"},
+                                    "oficina_id": {"type": "integer"},
+                                    "usuario_id": {"type": "integer"},
                                     "email": {"type": "string"}
                                 },
-                                "required": ["google_id"]
+                                "required": ["oficina_id"]
                             }
                         }
                     }

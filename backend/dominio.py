@@ -543,3 +543,26 @@ def auditoria_da_oficina():
     for evento in dados.get('logs', []):
         evento['usuario_nome'] = nomes.get(str(evento.get('usuario_id') or ''))
     return jsonify(dados)
+
+
+# ---------------------------------------------------------------------------
+# Assinatura (Atividade 11): só o dono da oficina assina; oficina e usuário vêm da sessão
+# ---------------------------------------------------------------------------
+
+@bp.post('/api/payment/checkout')
+@require_roles('dono')
+def payment_checkout():
+    core = _core()
+    user = g.user
+    if not core.check_rate_limit(f'checkout:{user["id"]}', max_requests=5, window_seconds=60):
+        return erro('Muitas tentativas de checkout. Por favor, aguarde um minuto.', 429)
+    try:
+        resp = core._forward_to_payment('POST', '/checkout', json={
+            'oficina_id': user['oficina_id'], 'usuario_id': user['id'], 'email': user.get('email', '')})
+        corpo, status = resp.json(), resp.status_code
+    except requests.RequestException as exc:
+        core.app.logger.error('payment-service indisponível em checkout: %s', exc)
+        return erro('Serviço de pagamentos indisponível.', 503)
+    if status == 201:
+        log_negocio('assinatura.checkout_iniciado', user, 'assinatura', user['oficina_id'])
+    return jsonify(corpo), status

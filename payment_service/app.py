@@ -14,7 +14,8 @@ from prometheus_flask_exporter import PrometheusMetrics
 from sqlalchemy import select
 
 from payment_service.database import session_scope, upgrade_database
-from payment_service.models import StripeCustomer
+from payment_service.models import Assinatura, StripeCustomer
+from payment_service.planos import plano_da_oficina
 from payment_service.webhooks import processar_evento
 
 app = Flask(__name__)
@@ -219,10 +220,11 @@ def entitlement():
 
 @app.post('/checkout')
 def create_checkout():
+    """Checkout de assinatura Pro da oficina. O customer fica em `assinaturas`, ligado à oficina."""
     err = require_internal_token()
     if err:
         return err
-    
+
     stripe_secret = os.getenv('STRIPE_SECRET_KEY') or stripe.api_key
     if not stripe_secret:
         return json_error('Pagamentos não configurados neste servidor.', 503)
@@ -231,30 +233,38 @@ def create_checkout():
     price_id = os.getenv('STRIPE_PRICE_ID', '')
     if not price_id:
         return json_error('Plano de assinatura não configurado.', 503)
-    
+
     payload = request.get_json(silent=True) or {}
-    google_id = str(payload.get('google_id', '')).strip()
+    try:
+        oficina_id = int(payload.get('oficina_id'))
+    except (TypeError, ValueError):
+        return json_error('oficina_id obrigatório.')
+    usuario_id = payload.get('usuario_id')
+    usuario_id = int(usuario_id) if str(usuario_id or '').isdigit() else None
     email = str(payload.get('email', '')).strip()
-    
-    if not google_id:
-        return json_error('google_id obrigatório.')
-    
-    customer_id = _get_stripe_customer_id(google_id)
-    
+
+    with session_scope() as db:
+        a = db.scalar(select(Assinatura).where(Assinatura.oficina_id == oficina_id))
+        if a and plano_da_oficina(db, oficina_id)['plano'] == 'pro':
+            return json_error('Esta oficina já tem o plano Pro. Use "Gerenciar assinatura".', 409)
+        customer_id = a.stripe_customer_id if a else None
+
+    meta = {'oficina_id': str(oficina_id), 'usuario_id': str(usuario_id or '')}
     if not customer_id:
         try:
-            customer = stripe.Customer.create(
-                email=email or None,
-                metadata={'google_id': google_id},
-            )
+            customer = stripe.Customer.create(email=email or None, metadata={'oficina_id': str(oficina_id)})
             customer_id = customer.id
         except stripe.StripeError as exc:
             app.logger.error('Erro ao criar customer Stripe: %s', exc)
             return json_error('Falha ao iniciar assinatura.', 502)
-        
         with session_scope() as db:
-            db.add(StripeCustomer(google_id=google_id, stripe_customer_id=customer_id))
-    
+            a = db.scalar(select(Assinatura).where(Assinatura.oficina_id == oficina_id))
+            if a is None:
+                a = Assinatura(oficina_id=oficina_id)
+                db.add(a)
+            a.stripe_customer_id = customer_id
+            a.usuario_id = usuario_id
+
     try:
         checkout_session = stripe.checkout.Session.create(
             customer=customer_id,
@@ -263,13 +273,15 @@ def create_checkout():
             mode='subscription',
             success_url=STRIPE_SUCCESS_URL,
             cancel_url=STRIPE_CANCEL_URL,
-            metadata={'google_id': google_id},
+            client_reference_id=str(oficina_id),
+            metadata=meta,
+            subscription_data={'metadata': meta},
         )
     except stripe.StripeError as exc:
         app.logger.error('Erro ao criar checkout session: %s', exc)
         return json_error('Falha ao criar sessão de pagamento.', 502)
-    
-    log_event('checkout_iniciado', google_id=google_id, detalhe=f'session_id={checkout_session.id}')
+
+    log_event('checkout_iniciado', detalhe=f'oficina_id={oficina_id} session_id={checkout_session.id}')
     return jsonify({'checkout_url': checkout_session.url}), 201
 
 @app.post('/portal')

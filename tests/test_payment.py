@@ -265,12 +265,12 @@ class TestCheckout:
         """Checkout sem X-Internal-Token deve retornar 403."""
         resp = payment_app.post(
             '/checkout',
-            json={'google_id': 'google123', 'email': 'test@test.com'},
+            json={'oficina_id': 10, 'email': 'test@test.com'},
         )
         assert resp.status_code == 403
 
-    def test_checkout_sem_google_id_retorna_400(self, payment_app, internal_headers):
-        """Checkout sem google_id deve retornar 400."""
+    def test_checkout_sem_oficina_id_retorna_400(self, payment_app, internal_headers):
+        """Checkout sem oficina_id deve retornar 400."""
         with patch.dict('os.environ', {'STRIPE_SECRET_KEY': 'sk_test_fake', 'STRIPE_PRICE_ID': 'price_test'}, clear=False):
             resp = payment_app.post(
                 '/checkout',
@@ -284,7 +284,7 @@ class TestCheckout:
         with patch.dict('os.environ', {'STRIPE_SECRET_KEY': 'sk_test_fake', 'STRIPE_PRICE_ID': ''}, clear=False):
             resp = payment_app.post(
                 '/checkout',
-                json={'google_id': 'google123', 'email': 'test@test.com'},
+                json={'oficina_id': 10, 'email': 'test@test.com'},
                 headers=internal_headers,
             )
             assert resp.status_code == 503
@@ -299,7 +299,7 @@ class TestCheckout:
             with patch.dict('os.environ', {'STRIPE_SECRET_KEY': '', 'STRIPE_PRICE_ID': 'price_test'}, clear=False):
                 resp = payment_app.post(
                     '/checkout',
-                    json={'google_id': 'google123', 'email': 'test@test.com'},
+                    json={'oficina_id': 10, 'email': 'test@test.com'},
                     headers=internal_headers,
                 )
                 assert resp.status_code == 503
