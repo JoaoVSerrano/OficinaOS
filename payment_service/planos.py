@@ -14,6 +14,9 @@ def plano_da_oficina(db: Session, oficina_id: int) -> dict:
     """Oficina sem linha, ou com assinatura que não vale mais, é Free."""
     a = db.scalar(select(Assinatura).where(Assinatura.oficina_id == oficina_id))
     if a is None:
-        return {'plano': 'free', 'status': 'free', 'inadimplente': False}
-    plano = a.plano if a.plano == 'pro' and a.status in STATUS_PRO else 'free'
-    return {'plano': plano, 'status': a.status, 'inadimplente': bool(a.inadimplente)}
+        return {'plano': 'free', 'status': 'free', 'inadimplente': False,
+                'periodo_fim': None, 'valor_mensal_centavos': 0}
+    pro = a.plano == 'pro' and a.status in STATUS_PRO
+    return {'plano': 'pro' if pro else 'free', 'status': a.status, 'inadimplente': bool(a.inadimplente),
+            'periodo_fim': a.periodo_fim.isoformat() if a.periodo_fim else None,
+            'valor_mensal_centavos': a.valor_mensal_centavos if pro else 0}

@@ -30,6 +30,18 @@ OPENAPI_SPEC: dict[str, Any] = {
                 }
             }
         },
+        "/internal/plano": {
+            "get": {
+                "summary": "Plano da oficina, lido do banco (sem Stripe e sem cache)",
+                "parameters": [
+                    {"name": "oficina_id", "in": "query", "required": True, "schema": {"type": "integer"}}
+                ],
+                "responses": {
+                    "200": {"description": "plano (free/pro), status, inadimplente, periodo_fim e valor_mensal_centavos."},
+                    "400": {"description": "oficina_id ausente ou inválido."}
+                }
+            }
+        },
         "/checkout": {
             "post": {
                 "summary": "Inicia o checkout da assinatura Pro da oficina (customer reutilizado; 409 se já é Pro)",

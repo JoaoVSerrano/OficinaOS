@@ -218,6 +218,20 @@ def entitlement():
     
     return jsonify(result)
 
+@app.get('/internal/plano')
+def plano_interno():
+    """Plano da oficina, lido só do banco (atualizado pelos webhooks). Sem Stripe e sem cache."""
+    err = require_internal_token()
+    if err:
+        return err
+    try:
+        oficina_id = int(request.args.get('oficina_id', ''))
+    except ValueError:
+        return json_error('oficina_id obrigatório.')
+    with session_scope() as db:
+        dados = plano_da_oficina(db, oficina_id)
+    return jsonify({'oficina_id': oficina_id, **dados})
+
 @app.post('/checkout')
 def create_checkout():
     """Checkout de assinatura Pro da oficina. O customer fica em `assinaturas`, ligado à oficina."""

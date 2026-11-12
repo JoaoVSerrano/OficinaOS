@@ -22,8 +22,19 @@ COMO_LIBERAR = 'Assine o Pro (R$ 49/mês) em Plano e assinatura'
 
 
 def plano_da_oficina(oficina_id: int) -> str:
-    """Plano atual da oficina. Até a Atividade 11 toda oficina é Free."""
-    return 'free'
+    """Plano atual da oficina, consultado ao payment-service (que lê o banco) a CADA chamada.
+
+    Sem cache: quando o webhook muda o plano, a próxima requisição já enxerga. Se o
+    payment-service falhar, vale o Free (o lado seguro: nunca libera o que não foi pago).
+    """
+    from backend import app as core
+    try:
+        resp = core._forward_to_payment('GET', f'/internal/plano?oficina_id={int(oficina_id)}')
+        plano = resp.json().get('plano') if resp.status_code == 200 else None
+    except Exception as exc:  # rede, JSON inválido, etc.
+        core.app.logger.warning('plano da oficina %s indisponível, assumindo Free: %s', oficina_id, exc)
+        return 'free'
+    return plano if plano in PLANOS else 'free'
 
 
 def limite(plano: str, chave: str):

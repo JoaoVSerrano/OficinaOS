@@ -62,7 +62,8 @@ def test_defaults_sao_free_sem_inadimplencia(db):
 
 def test_oficina_sem_linha_e_free(db):
     from payment_service.planos import plano_da_oficina
-    assert plano_da_oficina(db, 999) == {'plano': 'free', 'status': 'free', 'inadimplente': False}
+    assert plano_da_oficina(db, 999)['plano'] == 'free'
+    assert plano_da_oficina(db, 999)['inadimplente'] is False
 
 
 def test_plano_pro_ativo_e_lido_do_banco(db):

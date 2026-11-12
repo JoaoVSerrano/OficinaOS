@@ -151,6 +151,9 @@ def gw(monkeypatch):
                         lambda acao, usuario_id=None, detalhe='', **campos: eventos.append(
                             {'acao': acao, 'usuario_id': usuario_id, 'detalhe': detalhe, **campos}))
     monkeypatch.setattr(core, 'ensure_schema', lambda: None)
+    # plano padrão dos testes do gateway: Free (o payment-service não existe aqui)
+    monkeypatch.setattr(core, '_forward_to_payment',
+                        lambda *a, **k: SimpleNamespace(status_code=200, json=lambda: {'plano': 'free'}))
     core.app.config['TESTING'] = True
     with core.app.test_client() as c:
         def como(uid):
