@@ -2,6 +2,10 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Anexo, Api, ApiError, Os, STATUS_LABEL, dataHora, paraCentavos, reais } from '../core/api';
+import { CatalogoPicker, ItemEscolhido } from '../components/catalogo-picker';
+import { OsNotas } from '../components/os-notas';
+import { OsOrcamento } from '../components/os-orcamento';
+import { OsPagamentos } from '../components/os-pagamentos';
 
 interface Acao { destino: string; texto: string; papeis: string[]; primaria?: boolean; perigo?: boolean }
 const ACOES: Record<string, Acao[]> = {
@@ -17,7 +21,7 @@ const ACOES: Record<string, Acao[]> = {
 
 @Component({
   selector: 'app-os-detalhe',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, OsOrcamento, OsNotas, CatalogoPicker, OsPagamentos],
   template: `
     @if (naoEncontrada()) {
       <div class="card empty"><h1>Ordem de serviço não encontrada</h1>
@@ -44,6 +48,8 @@ const ACOES: Record<string, Acao[]> = {
           <div><span class="muted small">Cliente</span><div>{{ o.cliente?.nome }}</div></div>
           <div><span class="muted small">Aberta em</span><div>{{ quando(o.criada_em) }}</div></div>
           <div><span class="muted small">Atualizada em</span><div>{{ quando(o.atualizada_em) }}</div></div>
+          @if (o.km_entrada !== null) { <div><span class="muted small">Km de entrada</span><div>{{ o.km_entrada.toLocaleString('pt-BR') }} km</div></div> }
+          @if (o.veiculo) { <div><span class="muted small">Histórico</span><div><a [routerLink]="['/app/veiculos', o.veiculo.id, 'historico']">Ver histórico do veículo</a></div></div> }
         </div>
         <p style="margin-top:12px"><span class="muted small">Problema / serviço</span><br>{{ o.descricao }}</p>
         @if (acoes().length) {
@@ -71,6 +77,7 @@ const ACOES: Record<string, Acao[]> = {
           </table></div>
         }
         @if (podeItens()) {
+          <app-catalogo-picker (escolher)="adicionarDoCatalogo($event)" />
           <form (ngSubmit)="adicionarItem()" style="margin-top:12px">
             <div class="row">
               <div><label for="tipo">Tipo</label><select id="tipo" name="tipo" [(ngModel)]="item.tipo"><option value="servico">Serviço</option><option value="peca">Peça</option></select></div>
@@ -82,6 +89,10 @@ const ACOES: Record<string, Acao[]> = {
           </form>
         }
       </div>
+
+      <app-os-orcamento [os]="o" (mudou)="carregar()" />
+      <app-os-pagamentos [os]="o" (mudou)="carregar()" />
+      @if (ehEquipe()) { <app-os-notas [osId]="o.id" /> }
 
       <div class="card">
         <h2>Fotos e comprovantes</h2>
@@ -116,13 +127,16 @@ export class OsDetalhe implements OnInit {
   podeEditar = computed(() => ['dono', 'mecanico'].includes(this.papel() ?? '') && this.editavel());
   podeItens = computed(() => ['dono', 'mecanico'].includes(this.papel() ?? '') && ['aberta', 'orcamento_aprovado', 'em_servico'].includes(this.os()?.status ?? ''));
   podeAnexar = computed(() => ['dono', 'mecanico'].includes(this.papel() ?? '') && this.os()?.status !== 'cancelada');
-  acoes = computed(() => (ACOES[this.os()?.status ?? ''] ?? []).filter((a) => a.papeis.includes(this.papel() ?? '')));
+  ehEquipe = computed(() => ['dono', 'mecanico'].includes(this.papel() ?? ''));
+  /** Com orçamento enviado, aprovar é pelo orçamento (o backend recusa a aprovação direta por status). */
+  acoes = computed(() => (ACOES[this.os()?.status ?? ''] ?? []).filter((a) => a.papeis.includes(this.papel() ?? '')
+    && !(a.destino === 'orcamento_aprovado' && this.os()?.orcamento_status)));
   rotulo = (s: string) => STATUS_LABEL[s] ?? s;
   dinheiro = reais; quando = dataHora;
 
   async ngOnInit() { await this.carregar(); }
 
-  private async carregar() {
+  async carregar() {
     try {
       this.os.set((await this.api.get<{ ordem: Os }>('/api/os/' + this.id)).ordem);
       this.anexos.set((await this.api.get<{ anexos: Anexo[] }>(`/api/os/${this.id}/anexos`)).anexos);
@@ -144,6 +158,9 @@ export class OsDetalhe implements OnInit {
       await this.api.post(`/api/os/${this.id}/itens`, { tipo: this.item.tipo, descricao: this.item.descricao, quantidade: Number(this.item.quantidade), valor_unitario_centavos: centavos });
       this.item = { tipo: this.item.tipo, descricao: '', quantidade: 1, valor: '' };
     });
+  }
+  adicionarDoCatalogo(i: ItemEscolhido) {
+    return this.tentar(() => this.api.post(`/api/os/${this.id}/itens`, { ...i, quantidade: 1 }), 'Item do catálogo adicionado.');
   }
   removerItem(itemId: number) { return this.tentar(() => this.api.delete(`/api/os/${this.id}/itens/${itemId}`)); }
   async excluir() {

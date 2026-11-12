@@ -21,6 +21,9 @@ export interface Anexo { id: number; os_id: number; nome_original: string; tipo_
 export interface Os {
   id: number; status: string; descricao: string; mecanico_id: number | null; valor_total_centavos: number;
   criada_em: string; atualizada_em: string;
+  km_entrada: number | null; entregue_em: string | null;
+  /** status da versão mais recente do orçamento (null = sem orçamento enviado) */
+  orcamento_status: 'enviado' | 'aprovado' | 'recusado' | 'substituido' | null;
   veiculo: { id: number; placa: string; marca: string; modelo: string } | null;
   cliente: { id: number; nome: string } | null;
   itens?: Item[];

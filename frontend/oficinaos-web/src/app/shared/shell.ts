@@ -67,9 +67,9 @@ export class Shell implements OnInit {
       itens.push({ link: '/app/admin', texto: 'Painel' }, { link: '/app/auditoria', texto: 'Auditoria' });
     } else {
       itens.push({ link: '/app/os', texto: 'Ordens de serviço' });
-      if (papel === 'dono' || papel === 'mecanico') itens.push({ link: '/app/clientes', texto: 'Clientes' });
+      if (papel === 'dono' || papel === 'mecanico') itens.push({ link: '/app/clientes', texto: 'Clientes' }, { link: '/app/catalogo', texto: 'Catálogo' });
       itens.push({ link: '/app/veiculos', texto: 'Veículos' });
-      if (papel === 'dono') itens.push({ link: '/app/equipe', texto: 'Equipe' }, { link: '/app/auditoria', texto: 'Auditoria' });
+      if (papel === 'dono') itens.push({ link: '/app/financeiro', texto: 'Financeiro' }, { link: '/app/equipe', texto: 'Equipe' }, { link: '/app/auditoria', texto: 'Auditoria' });
       if (papel === 'dono' || papel === 'mecanico') itens.push({ link: '/app/plano', texto: 'Plano' });
     }
     itens.push({ link: '/app/perfil', texto: 'Perfil' });

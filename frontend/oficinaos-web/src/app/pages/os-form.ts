@@ -22,6 +22,8 @@ import { Api, ApiError, Os, Veiculo } from '../core/api';
       }
       <div class="field"><label for="descricao">Problema ou serviço a fazer</label>
         <textarea id="descricao" name="descricao" [(ngModel)]="descricao" required minlength="3" placeholder="Ex.: barulho na suspensão dianteira"></textarea></div>
+      <div class="field"><label for="km">Quilometragem de entrada (km)</label>
+        <input id="km" name="km" type="number" min="0" max="2000000" inputmode="numeric" [(ngModel)]="km" placeholder="Ex.: 45210"></div>
       @if (ehDono) {
         <div class="field"><label for="mec">Mecânico responsável</label>
           <select id="mec" name="mec" [(ngModel)]="mecanicoId">
@@ -44,14 +46,14 @@ export class OsForm implements OnInit {
   ehDono = this.api.user()?.role === 'dono';
   veiculos = signal<Veiculo[]>([]);
   mecanicos = signal<{ id: number; nome: string }[]>([]);
-  veiculoId: number | null = null; descricao = ''; mecanicoId: number | null = null;
+  veiculoId: number | null = null; descricao = ''; mecanicoId: number | null = null; km: number | null = null;
   erro = signal(''); limite = signal(false); salvando = signal(false);
 
   async ngOnInit() {
     try {
       if (this.id) {
         const { ordem } = await this.api.get<{ ordem: Os }>('/api/os/' + this.id);
-        this.descricao = ordem.descricao; this.mecanicoId = ordem.mecanico_id;
+        this.descricao = ordem.descricao; this.mecanicoId = ordem.mecanico_id; this.km = ordem.km_entrada;
       } else {
         this.veiculos.set((await this.api.get<{ veiculos: Veiculo[] }>('/api/veiculos')).veiculos);
       }
@@ -61,16 +63,19 @@ export class OsForm implements OnInit {
       }
     } catch (e) { this.erro.set((e as ApiError).message); }
   }
+  private kmOuNulo(): number | null {
+    return this.km === null || (this.km as unknown) === '' ? null : Math.trunc(Number(this.km));
+  }
   async salvar() {
     this.erro.set(''); this.limite.set(false); this.salvando.set(true);
     try {
       if (this.id) {
-        const corpo: any = { descricao: this.descricao };
+        const corpo: any = { descricao: this.descricao, km_entrada: this.kmOuNulo() };
         if (this.ehDono) corpo.mecanico_id = this.mecanicoId;
         await this.api.put('/api/os/' + this.id, corpo);
         this.router.navigate(['/app/os', this.id]);
       } else {
-        const corpo: any = { veiculo_id: this.veiculoId, descricao: this.descricao };
+        const corpo: any = { veiculo_id: this.veiculoId, descricao: this.descricao, km_entrada: this.kmOuNulo() };
         if (this.ehDono && this.mecanicoId) corpo.mecanico_id = this.mecanicoId;
         const r = await this.api.post<{ ordem: Os }>('/api/os', corpo);
         this.router.navigate(['/app/os', r.ordem.id]);

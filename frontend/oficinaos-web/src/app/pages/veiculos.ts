@@ -1,10 +1,11 @@
+import { RouterLink } from '@angular/router';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, ApiError, Cliente, Veiculo } from '../core/api';
 
 @Component({
   selector: 'app-veiculos',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   template: `
     <h1>Veículos</h1>
     @if (erro()) { <div class="alert err" role="alert">{{ erro() }}</div> }
@@ -36,7 +37,8 @@ import { Api, ApiError, Cliente, Veiculo } from '../core/api';
           <tbody>
             @for (v of veiculos(); track v.id) {
               <tr><td><strong>{{ v.placa }}</strong></td><td>{{ v.marca }} {{ v.modelo }}</td><td>{{ v.ano }}</td><td>{{ nomeCliente(v.cliente_id) }}</td>
-                <td class="right nowrap">@if (ehDono()) {
+                <td class="right nowrap"><a class="btn sm" [routerLink]="['/app/veiculos', v.id, 'historico']">Histórico</a>
+                  @if (ehDono()) {
                   <button class="btn sm" type="button" (click)="editar(v)">Editar</button>
                   <button class="btn sm danger" type="button" (click)="remover(v)">Remover</button> }</td></tr>
             }
