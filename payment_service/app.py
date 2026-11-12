@@ -14,7 +14,8 @@ from prometheus_flask_exporter import PrometheusMetrics
 from sqlalchemy import select
 
 from payment_service.database import session_scope, upgrade_database
-from payment_service.models import ProcessedWebhookEvent, StripeCustomer
+from payment_service.models import StripeCustomer
+from payment_service.webhooks import processar_evento
 
 app = Flask(__name__)
 metrics = PrometheusMetrics(app)
@@ -326,56 +327,22 @@ def stripe_webhook():
         app.logger.error('Erro ao construir evento webhook: %s', exc)
         return json_error('Payload inválido.', 400)
     
-    event_id = event.id
-    event_type = event.type
-    
-    with session_scope() as db:
-        existing = db.scalar(
-            select(ProcessedWebhookEvent).where(ProcessedWebhookEvent.stripe_event_id == event_id)
-        )
-        if existing:
-            app.logger.info('Evento webhook %s já processado — ignorado.', event_id)
-            return jsonify({'ok': True, 'duplicate': True})
-        
-        db.add(ProcessedWebhookEvent(stripe_event_id=event_id, event_type=event_type))
-    
-    _handle_webhook_event(event_type, event.data.object)
-    
-    log_event('webhook_processado', detalhe=f'event_type={event_type} event_id={event_id}')
-    return jsonify({'ok': True})
+    event_id = event['id']
+    event_type = event['type']
 
-def _handle_webhook_event(event_type: str, obj: Any) -> None:
-    if event_type == 'checkout.session.completed':
-        google_id = obj.get('metadata', {}).get('google_id', '')
-        if google_id:
-            try:
-                r = get_redis()
-                r.delete(f'entitlement:{google_id}')
-            except Exception:
-                pass
-            log_event('assinatura_ativada', google_id=google_id, detalhe=f'session_id={obj.get("id", "")}')
-    
-    elif event_type in ('customer.subscription.updated', 'customer.subscription.deleted'):
-        customer_id = obj.get('customer', '')
-        if customer_id:
-            try:
-                with session_scope() as db:
-                    record = db.scalar(
-                        select(StripeCustomer).where(StripeCustomer.stripe_customer_id == customer_id)
-                    )
-                    if record:
-                        r = get_redis()
-                        r.delete(f'entitlement:{record.google_id}')
-            except Exception as exc:
-                app.logger.warning('Falha ao invalidar cache após evento %s: %s', event_type, exc)
-        log_event('assinatura_atualizada', detalhe=f'event_type={event_type} customer_id={customer_id}')
-    
-    elif event_type == 'invoice.payment_failed':
-        customer_id = obj.get('customer', '')
-        log_event('pagamento_falhou', detalhe=f'customer_id={customer_id}')
-    
-    else:
-        app.logger.info('Evento webhook não tratado: %s', event_type)
+    try:
+        with session_scope() as db:
+            novo, negocio = processar_evento(db, event)
+    except Exception:
+        app.logger.exception('Falha ao processar webhook %s (%s).', event_id, event_type)
+        return json_error('Falha ao processar o evento.', 500)
+
+    if not novo:
+        app.logger.info('Evento webhook %s já processado — ignorado.', event_id)
+        return jsonify({'ok': True, 'duplicate': True})
+
+    log_event(negocio or 'webhook_processado', detalhe=f'event_type={event_type} event_id={event_id}')
+    return jsonify({'ok': True})
 
 @app.get('/plan-details')
 def get_plan_details():
