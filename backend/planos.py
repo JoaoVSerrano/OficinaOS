@@ -21,8 +21,11 @@ PLANOS = {
 COMO_LIBERAR = 'Assine o Pro (R$ 49/mês) em Plano e assinatura'
 
 
-def plano_da_oficina(oficina_id: int) -> str:
-    """Plano atual da oficina, consultado ao payment-service (que lê o banco) a CADA chamada.
+_FREE = {'plano': 'free', 'status': 'free', 'inadimplente': False, 'periodo_fim': None, 'valor_mensal_centavos': 0}
+
+
+def detalhes_da_oficina(oficina_id: int) -> dict:
+    """Plano, status, inadimplência e renovação, consultados ao payment-service (que lê o banco) a CADA chamada.
 
     Sem cache: quando o webhook muda o plano, a próxima requisição já enxerga. Se o
     payment-service falhar, vale o Free (o lado seguro: nunca libera o que não foi pago).
@@ -30,11 +33,17 @@ def plano_da_oficina(oficina_id: int) -> str:
     from backend import app as core
     try:
         resp = core._forward_to_payment('GET', f'/internal/plano?oficina_id={int(oficina_id)}')
-        plano = resp.json().get('plano') if resp.status_code == 200 else None
+        dados = resp.json() if resp.status_code == 200 else None
     except Exception as exc:  # rede, JSON inválido, etc.
         core.app.logger.warning('plano da oficina %s indisponível, assumindo Free: %s', oficina_id, exc)
-        return 'free'
-    return plano if plano in PLANOS else 'free'
+        return dict(_FREE)
+    if not isinstance(dados, dict) or dados.get('plano') not in PLANOS:
+        return dict(_FREE)
+    return {**_FREE, **{k: dados[k] for k in _FREE if k in dados}}
+
+
+def plano_da_oficina(oficina_id: int) -> str:
+    return detalhes_da_oficina(oficina_id)['plano']
 
 
 def limite(plano: str, chave: str):

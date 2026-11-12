@@ -755,6 +755,25 @@
         }
       }
     },
+    "/api/plano": {
+      "get": {
+        "tags": [
+          "Planos e Assinatura"
+        ],
+        "summary": "Plano atual, uso e limites da oficina (dono e mecânico; só o dono gerencia)",
+        "responses": {
+          "200": {
+            "description": "plano, status, inadimplente, periodo_fim, valor_mensal_centavos, uso, limites e pode_gerenciar"
+          },
+          "401": {
+            "description": "Sem login"
+          },
+          "403": {
+            "description": "Papel sem acesso (cliente e admin)"
+          }
+        }
+      }
+    },
     "/api/admin/painel": {
       "get": {
         "tags": [

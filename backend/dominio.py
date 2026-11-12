@@ -633,3 +633,28 @@ def admin_painel():
         'moeda': resumo.get('moeda', 'brl'),
         'eventos': _eventos_recentes(20),
     })
+
+
+@bp.get('/api/plano')
+@require_roles('dono', 'mecanico')
+def plano_atual():
+    """Plano, uso e limites da oficina do usuário (tela "Plano e assinatura")."""
+    from backend.ordens import os_do_mes
+    user = g.user
+    oficina_id = user['oficina_id']
+    det = planos.detalhes_da_oficina(oficina_id)
+    plano = det['plano']
+    try:
+        mecanicos = _contar_mecanicos(oficina_id)
+    except requests.RequestException:
+        return erro('Serviço de autenticação indisponível.', 503)
+    with session_scope() as db:
+        os_mes = os_do_mes(db, oficina_id)
+    return jsonify({
+        **det,
+        'nome': planos.PLANOS[plano]['nome'],
+        'preco_pro_centavos': planos.PLANOS['pro']['preco_mensal_centavos'],
+        'uso': {'os_mes': os_mes, 'mecanicos': mecanicos},
+        'limites': {k: planos.limite(plano, k) for k in ('max_os_mes', 'max_mecanicos', 'max_anexos_por_os')},
+        'pode_gerenciar': user['role'] == 'dono',
+    })
