@@ -19,7 +19,7 @@ from backend import escopo, planos
 from backend.database import session_scope
 from backend.dominio import (_core, _ids_veiculos_do_cliente_logado, _json, erro, log_negocio, negar_nao_encontrado,
                              require_roles, resposta_limite)
-from backend.models import AnexoOS, Cliente, ItemOS, OrdemServico, Veiculo
+from backend.models import AnexoOS, Cliente, ItemOS, Orcamento, OrdemServico, Veiculo
 
 bp = Blueprint('ordens', __name__)
 
@@ -73,11 +73,37 @@ def _os_dict(db, os_: OrdemServico, detalhado: bool = False) -> dict[str, Any]:
         'veiculo': {'id': veiculo.id, 'placa': veiculo.placa, 'marca': veiculo.marca, 'modelo': veiculo.modelo}
         if veiculo else None,
         'cliente': {'id': cliente.id, 'nome': cliente.nome} if cliente else None,
+        'km_entrada': os_.km_entrada, 'entregue_em': _iso(os_.entregue_em),
+        'orcamento_status': _orcamento_atual_status(db, os_.id),
     }
     if detalhado:
         itens = db.scalars(select(ItemOS).where(ItemOS.os_id == os_.id).order_by(ItemOS.id)).all()
         dados['itens'] = [_item_dict(i) for i in itens]
     return dados
+
+
+def _orcamento_atual_status(db, os_id: int) -> str | None:
+    """Status da versão mais recente do orçamento (None = OS sem orçamento enviado)."""
+    return db.scalar(select(Orcamento.status).where(Orcamento.os_id == os_id).order_by(Orcamento.versao.desc()).limit(1))
+
+
+def valor_devido(db, os_: OrdemServico) -> int:
+    """Total da OS menos o desconto do orçamento aprovado (itens incluídos depois da aprovação também contam)."""
+    desconto = db.scalar(select(Orcamento.desconto_centavos).where(
+        Orcamento.os_id == os_.id, Orcamento.status == 'aprovado').order_by(Orcamento.versao.desc()).limit(1)) or 0
+    return max(0, int(os_.valor_total_centavos) - int(desconto))
+
+
+KM_MAX = 2_000_000
+
+
+def _km(dados: dict[str, Any]) -> tuple[int | None, str | None]:
+    km = dados.get('km_entrada')
+    if km is None:
+        return None, None
+    if not isinstance(km, int) or isinstance(km, bool) or not 0 <= km <= KM_MAX:
+        return None, 'Quilometragem inválida (inteiro entre 0 e 2.000.000).'
+    return km, None
 
 
 def _filtro_visibilidade(db, user: dict[str, Any]) -> list[Any]:
@@ -143,6 +169,9 @@ def criar_os():
     if len(descricao) < 3:
         return erro('Descreva o problema ou o serviço (mínimo 3 caracteres).')
     veiculo_id = dados.get('veiculo_id')
+    km, msg = _km(dados)
+    if msg:
+        return erro(msg)
 
     try:
         with session_scope() as db:
@@ -164,7 +193,7 @@ def criar_os():
             agora_ = agora()
             os_ = OrdemServico(oficina_id=user['oficina_id'], veiculo_id=veiculo.id, mecanico_id=mecanico_id,
                                criada_por=user['id'], status='aberta', descricao=descricao,
-                               valor_total_centavos=0, criada_em=agora_, atualizada_em=agora_)
+                               valor_total_centavos=0, criada_em=agora_, atualizada_em=agora_, km_entrada=km)
             db.add(os_)
             db.flush()
             resultado = _os_dict(db, os_, detalhado=True)
@@ -189,6 +218,9 @@ def detalhar_os(os_id: int):
 def editar_os(os_id: int):
     user = g.user
     dados = _json()
+    km, msg = _km(dados)
+    if msg:
+        return erro(msg)
     try:
         with session_scope() as db:
             os_ = os_visivel(db, user, os_id)
@@ -196,6 +228,8 @@ def editar_os(os_id: int):
                 return negar_nao_encontrado(user, 'os', os_id)
             if os_.status in STATUS_FINAIS:
                 return erro('Ordem de serviço encerrada não pode ser editada.', 409)
+            if 'km_entrada' in dados:
+                os_.km_entrada = km
             if 'descricao' in dados:
                 descricao = str(dados['descricao']).strip()
                 if len(descricao) < 3:
@@ -284,6 +318,39 @@ def remover_item(os_id: int, item_id: int):
     return jsonify({'ordem': resultado})
 
 
+def transicionar(db, os_: OrdemServico, destino: str, user: dict[str, Any], *,
+                 via_orcamento: bool = False) -> tuple[str, int] | None:
+    """Aplica a máquina de estados (TRANSICOES) dentro da sessão. Devolve (mensagem, status_http) ou None.
+
+    Usada pela rota de status e pela decisão do orçamento (app ou link público). Com orçamento enviado,
+    a aprovação só acontece pelo orçamento (via_orcamento=True), nunca direto pelo status.
+    """
+    permitidos = TRANSICOES.get((os_.status, destino))
+    if permitidos is None:
+        return f"Transição inválida: '{os_.status}' não pode ir para '{destino}'.", 409
+    if user['role'] not in permitidos:
+        log_negocio('acesso_negado', user, 'os', os_.id, {'motivo': 'papel', 'transicao': f'{os_.status}->{destino}'})
+        return 'Seu papel não pode executar esta mudança de status.', 403
+    if destino == 'orcamento_aprovado':
+        if os_.valor_total_centavos <= 0:
+            return 'O orçamento ainda não tem itens com valor.', 409
+        if not via_orcamento and _orcamento_atual_status(db, os_.id) is not None:
+            return 'Esta OS tem orçamento enviado: aprove ou recuse pelo orçamento.', 409
+    os_.status = destino
+    os_.atualizada_em = agora()
+    if destino == 'entregue':
+        os_.entregue_em = os_.atualizada_em
+    return None
+
+
+def log_transicao(user: dict[str, Any], os_id: int, de: str, para: str, **extra: Any) -> None:
+    """Eventos da mudança de status (chamar DEPOIS de fechar a sessão)."""
+    detalhe = {'de': de, 'para': para, **extra}
+    log_negocio('os.status_alterado', user, 'os', os_id, detalhe)
+    if para in EVENTO_POR_DESTINO:
+        log_negocio(EVENTO_POR_DESTINO[para], user, 'os', os_id, detalhe)
+
+
 @bp.post('/api/os/<int:os_id>/status')
 @require_roles('dono', 'mecanico', 'cliente')
 def alterar_status(os_id: int):
@@ -293,22 +360,12 @@ def alterar_status(os_id: int):
         os_ = os_visivel(db, user, os_id)
         if not os_:
             return negar_nao_encontrado(user, 'os', os_id)
-        permitidos = TRANSICOES.get((os_.status, destino))
-        if permitidos is None:
-            return erro(f"Transição inválida: '{os_.status}' não pode ir para '{destino}'.", 409)
-        if user['role'] not in permitidos:
-            log_negocio('acesso_negado', user, 'os', os_id, {'motivo': 'papel', 'transicao': f'{os_.status}->{destino}'})
-            return erro('Seu papel não pode executar esta mudança de status.', 403)
-        if destino == 'orcamento_aprovado' and os_.valor_total_centavos <= 0:
-            return erro('O orçamento ainda não tem itens com valor.', 409)
         anterior = os_.status
-        os_.status = destino
-        os_.atualizada_em = agora()
+        falha = transicionar(db, os_, destino, user)
+        if falha:
+            return erro(*falha)
         resultado = _os_dict(db, os_, detalhado=True)
-    detalhe = {'de': anterior, 'para': destino}
-    log_negocio('os.status_alterado', user, 'os', os_id, detalhe)
-    if destino in EVENTO_POR_DESTINO:
-        log_negocio(EVENTO_POR_DESTINO[destino], user, 'os', os_id, detalhe)
+    log_transicao(user, os_id, anterior, destino)
     return jsonify({'ordem': resultado})
 
 
