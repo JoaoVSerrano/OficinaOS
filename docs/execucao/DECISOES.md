@@ -38,3 +38,18 @@ Registro de tudo que divergiu do plano (`EXECUCAO.md`) ou que foi decidido duran
 - **Dev local:** a porta 3307 e a subnet 10.201.0.0/24 já estavam em uso por outros containers na máquina; o override de dev usa MariaDB em 3398, Prometheus em 9092, Grafana em 3012 e subnet 10.211.0.0/24. Esses containers não foram tocados.
 - **Falha minha registrada:** o commit `docs: README e documentação do OficinaOS` foi feito com 1 teste vermelho (`test_legado_removido`, o cenário de aceite citava as palavras do legado de propósito). Corrigido no commit seguinte; a regra é checar o código de saída do `pytest` antes de commitar.
 - **Pendente do João:** URL pública (o README tem `URL_NO_AR` como marcador), confirmação do `mem_limit`, passos de `DEPLOY.md`.
+
+## Atividade 11 (desvios e decisões)
+
+- **Tenant da assinatura:** a assinatura é da **oficina** (`assinaturas.oficina_id` único), com `usuario_id` do dono que assinou. O customer da Stripe fica nessa tabela, não no usuário (explicar no relatório).
+- **Valor mensal vem do evento da Stripe**, não de constante: `amount_total` no `checkout.session.completed` e preço x quantidade no `customer.subscription.updated`. `PRO_VALOR_CENTAVOS` (4900) é só reserva. Com cupom, o `amount_total` do checkout mostra o valor com desconto até o próximo `subscription.updated`.
+- **MRR de teste** soma só `active` e `trialing`. `past_due` continua com acesso Pro, aparece em "inadimplentes" e fica fora do MRR.
+- **Plano lido do banco a cada requisição**, via `GET /internal/plano` do payment-service (sem Stripe, sem Redis). Se o payment-service falhar, o gateway assume **Free** (lado seguro: nunca libera o que não foi pago; um dono Pro perde a liberação enquanto o serviço estiver fora).
+- **Painel admin em `/app/admin`** (dentro do shell, protegido por papel) em vez de `/admin` solto; passou a ser a página inicial do admin. Dados do painel em `GET /api/admin/painel`, que reúne `/internal/resumo` (payment) e `/internal/usuarios/contagem` (auth). Se payment ou auth falharem, responde 503 em vez de mostrar números inventados.
+- **Tela de plano em `/app/plano`**, com `GET /api/plano` (dono e mecânico leem; só o dono gerencia). As URLs de retorno do checkout passaram a `/app/plano?assinatura=ok|cancelada`; em produção precisam ser configuradas na stack (DEPLOY.md, seção 4).
+- **Checkout e portal movidos para `backend/dominio.py`** (usam `require_roles('dono')`); saíram do `backend/app.py`. O gateway nunca aceita `oficina_id` do corpo.
+- **Entitlement legado removido** (`/entitlement`, `/api/premium/status`, cache Redis e `ENTITLEMENT_CACHE_TTL`). `stripe_customers`/`google_id` só restam na migração do legado.
+- **Migração do legado `stripe_customers` → `assinaturas`:** a função `legado_para_assinaturas` existe e é testada, mas **não está ligada ao deploy**: exigiria um mapa `google_id → (oficina, usuário)` do auth-service e o legado é de teste. As oficinas novas partem do Free.
+- **Cenário `ativ11.py` com eventos assinados:** com `--webhook-secret` (segredo de TESTE da stack, só pelo terminal) ele simula checkout, falha de pagamento e cancelamento. Não substitui o pagamento com o 4242, feito por `scripts/evidencias/checkout.py`.
+- **Descoberta na validação local:** a stack `oficinaos-dev` precisa ser reconstruída com `-p oficinaos-dev` (o nome padrão do projeto cria imagens `oficinaos-*` que a stack não usa).
+- **Não verificado nesta máquina:** o checkout real e o portal da Stripe (sem chaves de teste aqui). O cenário os pula com `[SKIP]`; `checkout.py` foi exercitado só até a abertura da Stripe.
