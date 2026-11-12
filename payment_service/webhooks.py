@@ -14,7 +14,22 @@ from sqlalchemy.orm import Session
 from .models import Assinatura, ProcessedWebhookEvent
 from .planos import STATUS_PRO
 
-VALOR_PRO_CENTAVOS = int(os.getenv('PRO_VALOR_CENTAVOS', '4900'))
+# Só reserva: o valor real vem do evento da Stripe.
+VALOR_PRO_PADRAO_CENTAVOS = int(os.getenv('PRO_VALOR_CENTAVOS', '4900'))
+
+
+def _valor_da_assinatura(obj: dict) -> tuple[int, str] | None:
+    """Valor mensal (centavos) e moeda lidos do evento: soma de preço x quantidade dos itens."""
+    itens = ((obj.get('items') or {}).get('data')) or []
+    total, moeda = 0, None
+    for item in itens:
+        preco = item.get('price') or {}
+        centavos = _int(preco.get('unit_amount'))
+        if centavos is None:
+            return None
+        total += centavos * (_int(item.get('quantity')) or 1)
+        moeda = moeda or preco.get('currency')
+    return (total, moeda or 'brl') if itens else None
 
 
 def _int(valor) -> int | None:
@@ -58,7 +73,9 @@ def _aplicar(db: Session, tipo: str, obj: dict, criado_em: int) -> str | None:
         if _atrasado(a, criado_em):
             return None
         a.plano, a.status = 'pro', 'active'
-        a.valor_mensal_centavos, a.moeda = VALOR_PRO_CENTAVOS, 'brl'
+        total = _int(obj.get('amount_total'))
+        a.valor_mensal_centavos = total if total is not None else VALOR_PRO_PADRAO_CENTAVOS
+        a.moeda = obj.get('currency') or 'brl'
         a.inadimplente = False
         a.ultimo_evento_em = criado_em
         return 'assinatura.ativada'
@@ -71,8 +88,11 @@ def _aplicar(db: Session, tipo: str, obj: dict, criado_em: int) -> str | None:
         status = obj.get('status') or a.status
         a.status = status
         a.plano = 'pro' if status in STATUS_PRO else 'free'
+        valor = _valor_da_assinatura(obj)
         if a.plano == 'free':
             a.valor_mensal_centavos = 0
+        elif valor:
+            a.valor_mensal_centavos, a.moeda = valor
         if status == 'active':
             a.inadimplente = False
         fim = _int(obj.get('current_period_end'))

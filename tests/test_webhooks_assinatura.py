@@ -128,3 +128,25 @@ def test_checkout_sem_oficina_e_ignorado_sem_erro(pay_client, pay_engine):
     r = _post(pay_client, 'checkout.session.completed', {'id': 'cs_x', 'customer': 'c', 'metadata': {}})
     assert r.status_code == 200
     assert _assinatura(pay_engine) is None
+
+
+def test_valor_mensal_vem_do_evento_da_stripe_e_nao_de_constante(pay_client, pay_engine):
+    _post(pay_client, 'checkout.session.completed', {**CHECKOUT, 'amount_total': 5900, 'currency': 'brl'},
+          'evt_1', 1000)
+    a = _assinatura(pay_engine)
+    assert (a.valor_mensal_centavos, a.moeda) == (5900, 'brl')
+
+
+def test_updated_com_novo_preco_atualiza_o_valor(pay_client, pay_engine):
+    _post(pay_client, 'checkout.session.completed', {**CHECKOUT, 'amount_total': 4900, 'currency': 'brl'},
+          'evt_1', 1000)
+    _post(pay_client, 'customer.subscription.updated',
+          {'id': 'sub_1', 'customer': 'cus_1', 'status': 'active',
+           'items': {'data': [{'price': {'unit_amount': 7000, 'currency': 'brl'}, 'quantity': 2}]}},
+          'evt_2', 2000)
+    assert _assinatura(pay_engine).valor_mensal_centavos == 14000  # preço x quantidade
+
+
+def test_checkout_sem_valor_no_evento_usa_o_padrao_configurado(pay_client, pay_engine):
+    _post(pay_client, 'checkout.session.completed', CHECKOUT, 'evt_1', 1000)
+    assert _assinatura(pay_engine).valor_mensal_centavos == 4900
