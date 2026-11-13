@@ -101,10 +101,16 @@ export class Api {
 export function reais(centavos: number | null | undefined): string {
   return ((centavos ?? 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
-/** "45,90" ou "45.90" -> 4590. NaN se inválido. */
+/** Texto em reais -> centavos. Aceita "45,90", "45.90", "1.234,56", "1.234" e "R$ 10,00". NaN se inválido. */
 export function paraCentavos(texto: string): number {
-  const n = Number(String(texto).trim().replace(/\./g, '').replace(',', '.'));
-  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : NaN;
+  const t = String(texto ?? '').trim().replace(/^R\$\s*/i, '');
+  let normal: string;
+  if (/^(\d{1,3}(\.\d{3})+|\d+),\d{1,2}$/.test(t)) normal = t.replace(/\./g, '').replace(',', '.'); // vírgula decimal
+  else if (/^\d+\.\d{1,2}$/.test(t)) normal = t;                                                 // ponto decimal: 45.90
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) normal = t.replace(/\./g, '');                        // milhar: 1.234
+  else if (/^\d+$/.test(t)) normal = t;
+  else return NaN;
+  return Math.round(Number(normal) * 100);
 }
 export function dataHora(iso: string | null | undefined): string {
   if (!iso) return '';

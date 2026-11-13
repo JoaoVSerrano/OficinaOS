@@ -5,11 +5,8 @@ import { Api, ApiError, paraCentavos, reais } from '../core/api';
 
 type Tipo = ItemCatalogo['tipo'];
 
-/** "120.50" (ponto como separador decimal) vira "120,50" antes de converter; "1.234,56" segue igual. */
-function centavosDoTexto(texto: string): number {
-  const t = String(texto ?? '').trim();
-  return paraCentavos(/^\d+\.\d{1,2}$/.test(t) ? t.replace('.', ',') : t);
-}
+/** paraCentavos já aceita "120,50", "120.50" e "1.234,56". */
+const centavosDoTexto = paraCentavos;
 function textoDosCentavos(centavos: number): string {
   return (centavos / 100).toFixed(2).replace('.', ',');
 }
