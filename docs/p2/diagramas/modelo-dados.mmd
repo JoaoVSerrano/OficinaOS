@@ -7,6 +7,10 @@ erDiagram
     ORDENS_SERVICO ||--o{ ITENS_OS : contem
     ORDENS_SERVICO ||--o{ ANEXOS_OS : tem
     OFICINAS ||--o| ASSINATURAS : assina
+    OFICINAS ||--o{ CATALOGO_ITENS : precifica
+    ORDENS_SERVICO ||--o{ ORCAMENTOS : "versoes enviadas"
+    ORDENS_SERVICO ||--o{ NOTAS_OS : "anotacoes internas"
+    ORDENS_SERVICO ||--o{ PAGAMENTOS_OS : recebe
     OFICINAS {
         int id PK
         string nome
@@ -39,7 +43,43 @@ erDiagram
         string status
         text descricao
         bigint valor_total_centavos
+        int km_entrada
+        timestamp entregue_em
         timestamp excluida_em "exclusao logica"
+    }
+    ORCAMENTOS {
+        int id PK
+        int os_id FK
+        int versao "unica por OS"
+        string status "enviado, aprovado, recusado, substituido"
+        text itens_json "foto dos itens no envio"
+        bigint desconto_centavos
+        bigint total_centavos
+        date validade_ate
+        string token_hash UK "sha256 do link publico"
+        string decidido_via "app ou link"
+        string motivo_recusa
+    }
+    NOTAS_OS {
+        int id PK
+        int os_id FK
+        int autor_id
+        text texto
+    }
+    CATALOGO_ITENS {
+        int id PK
+        int oficina_id FK
+        string tipo "servico ou peca"
+        string descricao
+        bigint valor_centavos
+        bool ativo
+    }
+    PAGAMENTOS_OS {
+        int id PK
+        int os_id FK
+        bigint valor_centavos
+        string forma "pix, dinheiro, cartao, boleto"
+        date pago_em
     }
     ITENS_OS {
         int id PK
@@ -59,13 +99,15 @@ erDiagram
     }
     ASSINATURAS {
         int id PK
-        int oficina_id UK
+        int oficina_id UK "payment-service, sem FK"
+        int usuario_id "dono que assinou"
         string stripe_customer_id
         string stripe_subscription_id
         string plano "free ou pro"
         string status
         bigint valor_mensal_centavos
         bool inadimplente
+        bigint ultimo_evento_em "ordem dos webhooks"
     }
     USUARIOS {
         int id PK

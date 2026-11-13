@@ -1,0 +1,26 @@
+sequenceDiagram
+    autonumber
+    actor D as Dono da oficina
+    participant A as app (gateway)
+    participant P as payment-service
+    participant S as Stripe (modo de teste)
+    participant B as MariaDB (assinaturas)
+    D->>A: POST /api/payment/checkout (sessão de dono)
+    A->>P: POST /checkout {oficina_id e usuario_id da sessão}
+    P->>S: Customer (reutilizado) + Checkout Session mode=subscription, client_reference_id = oficina
+    S-->>D: página de pagamento (cartão de teste 4242)
+    D->>S: paga
+    S-->>D: volta para /app/plano?assinatura=ok ("processando…")
+    S->>A: POST /api/payment/webhook checkout.session.completed + Stripe-Signature
+    A->>P: repassa corpo e assinatura sem alterar
+    Note over P: construct_event valida a assinatura (inválida = 400)
+    P->>B: na MESMA transação: plano pro + evento em processed_webhook_events
+    Note over P,B: evento repetido é ignorado · evento mais antigo não desfaz o mais novo · falha devolve 500 e a Stripe reenvia
+    D->>A: 21ª OS do mês
+    A->>P: GET /internal/plano (lê só o banco, a cada requisição)
+    P-->>A: pro
+    A-->>D: 201 (no Free seria 402 com "Assine o Pro")
+    D->>S: portal do cliente: cancelar (imediato)
+    S->>A: customer.subscription.deleted
+    A->>P: repassa
+    P->>B: plano free (limites voltam)
