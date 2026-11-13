@@ -4,7 +4,7 @@
 
 > Projeto da disciplina **ISW055 — Introdução à Computação em Nuvem** (Fatec Pompeia), professor [Allan Siriani](https://github.com/siriani). Aluno: João Victor Serrano.
 >
-> **Relatório P2:** `docs/P2_ISW055_Joao_Serrano_assinado.pdf` (disponível na entrega da P2) · **Banco:** [db/](db/) · **API:** `/docs` (Swagger)
+> **Relatório P2:** [docs/P2_ISW055_Joao_Serrano_assinado.pdf](docs/P2_ISW055_Joao_Serrano_assinado.pdf) (disponível na entrega da P2) · **Banco:** [db/](db/) · **API:** `/docs` (Swagger)
 >
 > **Os valores em R$, horas e quantidades da seção 1 a 7 são estimativas minhas, para raciocinar sobre o negócio. Não vêm de pesquisa ou fonte oficial.**
 
@@ -14,7 +14,7 @@
 
 **Quem sofre:** o dono de oficina mecânica independente, com 2 a 4 mecânicos, que atende 15 a 25 carros por semana e administra tudo sozinho.
 
-**Quando:** no balcão e no fim do dia. O carro entra, o dono anota num caderno, o cliente manda foto do painel no WhatsApp, o mecânico troca uma peça e ninguém registra. Depois de duas semanas ninguém lembra o que foi feito naquele carro.
+**Quando:** no balcão e no fim do dia. O carro entra, o dono anota num caderno, o cliente manda foto do painel no WhatsApp, o mecânico troca uma peça e ninguém registra. Depois de duas semanas nin[...]
 
 **Como resolve hoje:** caderno de capa dura, planilha que só o dono entende e conversas de WhatsApp com fotos soltas. A "memória do dono" faz o resto.
 
@@ -33,11 +33,11 @@
 
 ## 2. Persona
 
-**Seu Antônio Ferreira, 46 anos**, dono da "Auto Mecânica Ferreira", oficina de bairro numa cidade do interior de São Paulo. Tem 3 mecânicos e atende de 15 a 25 carros por semana. Começou como mecânico, abriu a oficina há 12 anos e entende de carro, mas não gosta de computador.
+**Seu Antônio Ferreira, 46 anos**, dono da "Auto Mecânica Ferreira", oficina de bairro numa cidade do interior de São Paulo. Tem 3 mecânicos e atende de 15 a 25 carros por semana. Começou como me[...]
 
-- **Rotina:** abre a oficina às 7h30, recebe os carros, anota no caderno, passa o serviço para o mecânico, responde WhatsApp entre um carro e outro, faz orçamento de cabeça ou numa planilha e fecha o caixa à noite.
+- **Rotina:** abre a oficina às 7h30, recebe os carros, anota no caderno, passa o serviço para o mecânico, responde WhatsApp entre um carro e outro, faz orçamento de cabeça ou numa planilha e fec[...]
 - **O que tenta fazer:** saber o que está em andamento, o que foi aprovado, o que está pronto e o que falta cobrar. Avisar o cliente sem precisar ligar.
-- **O que atrapalha:** o caderno tem letra de três pessoas; as fotos ficam no celular do mecânico; o cliente pergunta o que foi trocado há seis meses e ele não tem como provar. Já testou um sistema de gestão, achou complicado e voltou ao caderno.
+- **O que atrapalha:** o caderno tem letra de três pessoas; as fotos ficam no celular do mecânico; o cliente pergunta o que foi trocado há seis meses e ele não tem como provar. Já testou um siste[...]
 
 ---
 
@@ -54,7 +54,7 @@
 
 ## 4. Proposta de valor
 
-**Para o dono de oficina pequena, o OficinaOS é o jeito mais simples de saber, em dois toques, o que foi feito em cada carro, o que o cliente aprovou e o que falta cobrar, sem caderno, sem planilha e sem ligar para ninguém.**
+**Para o dono de oficina pequena, o OficinaOS é o jeito mais simples de saber, em dois toques, o que foi feito em cada carro, o que o cliente aprovou e o que falta cobrar, sem caderno, sem planilha e[...]
 
 ---
 
@@ -66,9 +66,9 @@
 | Mecânicos | 1 | vários |
 | Fotos e anexos | até 3 por ordem de serviço | ilimitados |
 
-- **O que o Free limita:** 20 OS por mês cobrem uma oficina que está testando, mas uma oficina com 15 a 25 carros por semana (60 a 100 por mês) passa do limite na primeira semana. Um mecânico apenas impede que a equipe use o sistema de verdade.
+- **O que o Free limita:** 20 OS por mês cobrem uma oficina que está testando, mas uma oficina com 15 a 25 carros por semana (60 a 100 por mês) passa do limite na primeira semana. Um mecânico apen[...]
 - **Por que o dono pagaria:** o limite aparece justamente quando o sistema virou hábito. R$ 49/mês custam menos que um único serviço esquecido de cobrar (estimativa de R$ 600+/mês).
-- **Decisão de escopo:** o plano original previa "histórico do veículo de 30 dias" no Free. Não foi implementado: a tabela acima reflete o que o sistema realmente limita (ordens de serviço por mês, mecânicos e anexos por OS).
+- **Decisão de escopo:** o plano original previa "histórico do veículo de 30 dias" no Free. Não foi implementado: a tabela acima reflete o que o sistema realmente limita (ordens de serviço por m[...]
 - **Stripe:** a assinatura usa o Checkout hospedado da Stripe, no **modo de teste** nesta disciplina. Nenhum cartão real é cobrado e o sistema nunca guarda dados de cartão.
 
 ---
@@ -93,12 +93,12 @@ Tudo isso é teste: na disciplina o MRR vem de assinaturas em modo de teste da S
 | **1. Problema** | Serviços e peças não anotados (e não cobrados); histórico do veículo perdido; cliente liga para saber se o carro está pronto; sem prova do que foi trocado. |
 | **2. Segmentos de clientes** | Donos de oficina mecânica independente com 2 a 4 mecânicos e 15 a 25 carros por semana, que hoje usam caderno, planilha e WhatsApp. |
 | **3. Proposta única de valor** | O jeito mais simples de saber, em dois toques, o que foi feito em cada carro, o que o cliente aprovou e o que falta cobrar. |
-| **4. Solução** | 1) Ordem de serviço com status (aberta, orçamento aprovado, em serviço, pronta, entregue). 2) Histórico do veículo com fotos da entrada e peças trocadas. 3) Orçamento aprovado pelo cliente por link. |
+| **4. Solução** | 1) Ordem de serviço com status (aberta, orçamento aprovado, em serviço, pronta, entregue). 2) Histórico do veículo com fotos da entrada e peças trocadas. 3) Orçamento aprov[...] |
 | **5. Canais** | Indicação entre donos de oficina; WhatsApp e grupos de mecânicos; landing page com cadastro gratuito; demonstração presencial em oficinas da região. |
 | **6. Fontes de receita** | Assinatura Pro de R$ 49/mês via Stripe; plano Free como porta de entrada. |
 | **7. Estrutura de custos** | Infra da VM (Proxmox/Docker, custo baixo na disciplina); taxas do Stripe (por cobrança); serviços externos de e-mail; meu tempo de desenvolvimento e suporte. |
 | **8. Métricas-chave** | Assinantes Pro, MRR, retenção, OS criadas por oficina ativa. |
-| **9. Vantagem injusta** | Já existe uma base pronta e testada (login com papéis, auditoria, upload de fotos, assinatura e observabilidade), então o custo de operar é baixo; histórico acumulado do veículo cria dependência saudável (quanto mais OS, mais difícil largar). |
+| **9. Vantagem injusta** | Já existe uma base pronta e testada (login com papéis, auditoria, upload de fotos, assinatura e observabilidade), então o custo de operar é baixo; histórico acumulado [...] |
 
 ---
 
@@ -150,7 +150,7 @@ flowchart LR
     PROM -->|/metrics| APP
 ```
 
-Detalhes (fluxo de uma requisição, modelo de dados, segurança) em [DOCUMENTACAO.md](DOCUMENTACAO.md). Documento da P1: [P1 ISW055 — João Serrano (assinado)](docs/P1_ISW055_Joao_Serrano_assinado.pdf).
+Detalhes (fluxo de uma requisição, modelo de dados, segurança) em [DOCUMENTACAO.md](DOCUMENTACAO.md). Documento da P1: [P1 ISW055 — João Serrano (assinado)](docs/P1_ISW055_Joao_Serrano_assi[...]
 
 ---
 
@@ -160,7 +160,7 @@ Detalhes (fluxo de uma requisição, modelo de dados, segurança) em [DOCUMENTAC
 |---|---|---|
 | VM Ubuntu no Proxmox | **IaaS** | Recebo uma máquina virtual crua e sou responsável pelo sistema operacional, pelo Docker e pelas atualizações. |
 | Docker Engine e rede `oficinaos-net` | **IaaS** | Instalado e mantido por mim dentro da VM; é a infraestrutura sobre a qual os containers rodam. |
-| Containers `app`, `auth-service`, `log-service`, `payment-service` | **PaaS** | Só entrego o código e as variáveis de ambiente; a stack sobe, reinicia e é atualizada pelo Portainer sem eu cuidar de servidor por container. |
+| Containers `app`, `auth-service`, `log-service`, `payment-service` | **PaaS** | Só entrego o código e as variáveis de ambiente; a stack sobe, reinicia e é atualizada pelo Portainer sem eu cuidar[...] |
 | Redis e MinIO (containers) | **PaaS** | São serviços de plataforma consumidos por API (stream/cache e objetos S3); eu configuro, mas não os desenvolvo. |
 | Prometheus e Grafana (containers) | **PaaS** | Plataforma de observabilidade pronta; só forneço configuração e dashboards. |
 | Portainer | **PaaS** | Camada de orquestração que recebe o repositório Git e faz o deploy da stack (com webhook do CI/CD). |
@@ -176,7 +176,7 @@ Detalhes (fluxo de uma requisição, modelo de dados, segurança) em [DOCUMENTAC
 
 ## 11. Papéis e permissões
 
-O papel e a oficina vêm sempre do `auth-service` (rota `/me`), nunca do corpo ou da URL da requisição. A permissão é checada **no backend**, mesmo chamando a API direto; cada tentativa negada vira o evento `acesso_negado` no log.
+O papel e a oficina vêm sempre do `auth-service` (rota `/me`), nunca do corpo ou da URL da requisição. A permissão é checada **no backend**, mesmo chamando a API direto; cada tentativa negad[...]
 
 | Ação | `admin` | `dono` | `mecanico` | `cliente` |
 |---|:-:|:-:|:-:|:-:|
@@ -197,16 +197,16 @@ O papel e a oficina vêm sempre do `auth-service` (rota `/me`), nunca do corpo o
 | Auditoria da oficina | ❌ | ✅ | ❌ | ❌ |
 | Log de todas as oficinas e painel da plataforma | ✅ | ❌ | ❌ | ❌ |
 
-**Isolamento:** toda tabela do domínio tem `oficina_id` (direto ou via `os_id`) e toda consulta passa por `backend/escopo.py`. Abrir o ID de outra oficina responde **404** (sem revelar que o registro existe). Sem login, **401**; papel sem permissão, **403**; transição de status inválida, **409**; limite do plano, **402**.
+**Isolamento:** toda tabela do domínio tem `oficina_id` (direto ou via `os_id`) e toda consulta passa por `backend/escopo.py`. Abrir o ID de outra oficina responde **404** (sem revelar que o registro[...]
 
 **Status da OS:** `aberta` → `orcamento_aprovado` → `em_servico` → `pronta` → `entregue` (e `cancelada`, só pelo dono, antes de entregar).
 
 ### Do orçamento à entrega
 
 - **Catálogo:** o dono cadastra serviços e peças com preço padrão (`/app/catalogo`); na OS, "Adicionar do catálogo" inclui o item com um clique (o valor continua editável).
-- **Orçamento com versões:** os itens da OS são o rascunho. "Enviar orçamento" tira uma foto dos itens com desconto, validade (1 a 90 dias) e observações para o cliente. Reenviar cria a versão seguinte e a anterior deixa de valer. Anotações internas ficam só para dono e mecânico.
-- **Link do cliente:** cada envio gera um link `/orcamento/<token>` (o banco guarda só o hash do token). O cliente abre sem login, imprime ou salva em PDF e aprova ou recusa (com motivo). A resposta pública não traz ids, e-mail nem telefone, não vai para cache e tem limite de tentativas por IP e por link. Link vencido responde 410; versão substituída ou já decidida, 409. Com orçamento enviado, a aprovação só acontece pelo orçamento.
-- **Km, pagamento e histórico:** a OS registra o km de entrada. Com a OS pronta ou entregue, o dono registra os pagamentos (Pix, dinheiro, cartão, boleto) até o valor devido (total menos o desconto aprovado); entregar sem quitar é permitido e o saldo vai para "a receber". O histórico do veículo lista todas as OS com km e datas.
+- **Orçamento com versões:** os itens da OS são o rascunho. "Enviar orçamento" tira uma foto dos itens com desconto, validade (1 a 90 dias) e observações para o cliente. Reenviar cria a versão [...]
+- **Link do cliente:** cada envio gera um link `/orcamento/<token>` (o banco guarda só o hash do token). O cliente abre sem login, imprime ou salva em PDF e aprova ou recusa (com motivo). A resposta [...]
+- **Km, pagamento e histórico:** a OS registra o km de entrada. Com a OS pronta ou entregue, o dono registra os pagamentos (Pix, dinheiro, cartão, boleto) até o valor devido (total menos o desconto[...]
 - **Financeiro do mês** (`/app/financeiro`): faturado pelo dia do pagamento, por forma, OS entregues, ticket médio e o total a receber hoje.
 
 **Cadastro:** "Sou dono" cria a oficina; "Sou mecânico" e "Sou cliente" pedem o **código de convite**, mostrado ao dono na tela Equipe.
@@ -219,21 +219,21 @@ O papel e a oficina vêm sempre do `auth-service` (rota `/me`), nunca do corpo o
 | Mecânicos | 1 | sem limite |
 | Anexos por OS | 3 | sem limite |
 
-Ao passar do limite a API responde **402** com `{erro, codigo: "limite_plano", limite, uso, plano, como_liberar}` e registra `plano.limite_atingido`. A decisão usa o plano **lido do banco a cada requisição** (nunca a Stripe nem cache); se o payment-service estiver fora do ar vale o Free.
+Ao passar do limite a API responde **402** com `{erro, codigo: "limite_plano", limite, uso, plano, como_liberar}` e registra `plano.limite_atingido`. A decisão usa o plano **lido do banco a cada requ[...]
 
 ### Assinatura Pro (Atividade 11, Stripe **somente em modo de teste**)
 
-**Adaptação ao tenant:** aqui quem assina é a **oficina**, não o usuário. O customer da Stripe e a assinatura ficam na tabela `assinaturas` (uma linha por oficina, `oficina_id` único), ligados ao `usuario_id` do dono que assinou. Oficina sem linha é Free.
+**Adaptação ao tenant:** aqui quem assina é a **oficina**, não o usuário. O customer da Stripe e a assinatura ficam na tabela `assinaturas` (uma linha por oficina, `oficina_id` único), ligados a[...]
 
 **Fluxo (roteiro do professor):**
 1. Cria a conta como dono: a oficina nasce **Free**.
 2. Chega a 20 OS no mês: a 21ª é recusada (402) com a mensagem do plano e o botão **Assinar Pro**.
-3. Em **Plano e assinatura** (`/app/plano`) o dono clica em *Assinar Pro*: o gateway cria o Checkout (`client_reference_id` e metadata levam a oficina) e redireciona para a Stripe. Cartão de teste: `4242 4242 4242 4242`, qualquer data futura e CVC.
+3. Em **Plano e assinatura** (`/app/plano`) o dono clica em *Assinar Pro*: o gateway cria o Checkout (`client_reference_id` e metadata levam a oficina) e redireciona para a Stripe. Cartão de teste: [...]
 4. Na volta a tela mostra “processando…”: o plano **só muda quando o webhook chega**, nunca pelo retorno do navegador.
 5. *Gerenciar assinatura* abre o Billing Portal; o cancelamento imediato está habilitado no painel da Stripe para o teste. O webhook `customer.subscription.deleted` devolve a oficina ao Free.
 6. O admin da plataforma vê em `/app/admin` as oficinas e usuários por plano, as assinaturas ativas, o **MRR de teste** (soma mensal das assinaturas ativas) e os últimos eventos.
 
-**Webhooks** (`POST /api/payment/webhook`, assinatura `Stripe-Signature` sempre validada; inválida → 400): `checkout.session.completed` (salva customer e subscription e muda para Pro), `customer.subscription.updated` (plano, status, valor e renovação), `customer.subscription.deleted` (volta ao Free) e `invoice.payment_failed` (marca inadimplência e mostra o aviso). Cada evento é aplicado numa **única transação** com o registro de idempotência: evento repetido não duplica efeito, evento fora de ordem não desfaz o mais novo e, se o efeito falha, a resposta é 500 e a Stripe reenvia.
+**Webhooks** (`POST /api/payment/webhook`, assinatura `Stripe-Signature` sempre validada; inválida → 400): `checkout.session.completed` (salva customer e subscription e muda para Pro), `customer.su[...]
 
 **Como testar o webhook localmente** (com a Stripe CLI e chaves `sk_test_`/`pk_test_` no `.env`):
 
@@ -264,19 +264,20 @@ No Portainer a stack usa o `docker-compose.yml` (sem o override de desenvolvimen
 
 ## 14. Banco de dados
 
-O banco do domínio é recriável a partir do repositório. As tabelas novas (`oficinas`, `clientes`, `veiculos`, `ordens_servico`, `itens_os`, `anexos_os`) têm chaves estrangeiras e são criadas pela migração `0002_dominio_oficina`; o SQL versionado está em [`db/001_dominio.sql`](db/001_dominio.sql) (esquema), [`db/002_seed.sql`](db/002_seed.sql) (dados fictícios, idempotente) e [`db/README.md`](db/README.md). Cada serviço tem o próprio Alembic (`alembic.ini`, `alembic-auth.ini`, `alembic-payment.ini`) e as migrações rodam sozinhas quando o container sobe.
+O banco do domínio é recriável a partir do repositório. As tabelas novas (`oficinas`, `clientes`, `veiculos`, `ordens_servico`, `itens_os`, `anexos_os`) têm chaves estrangeiras e são criadas pel[...]
 
 ## 15. Variáveis de ambiente
 
-Somente **nomes** (os valores ficam no `.env` local ou na stack do Portainer): consulte [`.env.example`](.env.example). Obrigatórias: `DB_*`, `FLASK_SECRET_KEY`, `AUTH_SECRET_KEY`, `INTERNAL_TOKEN`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`. Opcionais: Google OAuth, SMTP, Stripe (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`, `STRIPE_SUCCESS_URL`, `STRIPE_CANCEL_URL`, `PRO_VALOR_CENTAVOS`), `MINIO_BUCKET_NAME` (avatares), `MINIO_ANEXOS_BUCKET` (anexos privados) e Grafana.
+Somente **nomes** (os valores ficam no `.env` local ou na stack do Portainer): consulte [`.env.example`](.env.example). Obrigatórias: `DB_*`, `FLASK_SECRET_KEY`, `AUTH_SECRET_KEY`, `INTERNAL_TOKEN`, [...]
 
 ## 16. Qualidade: testes, Swagger e CI/CD
 
-- **Testes:** `pytest tests/ -v` cobre papéis (403), isolamento por oficina (404), limites do plano (402), máquina de estados (409), anexos (tipo pelo conteúdo, tamanho, bucket privado), eventos de log e migrações (SQL offline).
-- **Swagger:** `/docs` agrega gateway, auth e log; `tests/test_swagger.py` falha se uma rota existir sem documentação (e vice-versa). Regenerar `openapi.json/yaml`: `python scripts/generate_openapi.py`.
+- **Testes:** `pytest tests/ -v` cobre papéis (403), isolamento por oficina (404), limites do plano (402), máquina de estados (409), anexos (tipo pelo conteúdo, tamanho, bucket privado), eventos de[...]
+- **Swagger:** `/docs` agrega gateway, auth e log; `tests/test_swagger.py` falha se uma rota existir sem documentação (e vice-versa). Regenerar `openapi.json/yaml`: `python scripts/generate_openapi.[...]
 - **CI/CD:** push na `main` roda os testes, publica as imagens `oficinaos-*` no GHCR e aciona o webhook do Portainer, com smoke test em `/health`.
 - **Observabilidade:** `/health` com readiness real, `/metrics` e dashboard no Grafana.
 
 ## 17. Histórico do projeto
 
-O OficinaOS nasceu como **fork com histórico completo** do catálogo de filmes usado nas Atividades 1 a 8 ([github.com/JoaoVSerrano/tomhanks](https://github.com/JoaoVSerrano/tomhanks)). A Atividade 10 trocou o domínio: saíram o catálogo de filmes, favoritos, comentários e a integração com a TMDB. A documentação do sistema antigo continua disponível, só para consulta, em [docs/historico-tomhanks.md](docs/historico-tomhanks.md) e [docs/historico-documentacao-tomhanks.md](docs/historico-documentacao-tomhanks.md); o backlog das Atividades 10 e 11 está em [docs/backlog-issues.md](docs/backlog-issues.md).
+O OficinaOS nasceu como **fork com histórico completo** do catálogo de filmes usado nas Atividades 1 a 8 ([github.com/JoaoVSerrano/tomhanks](https://github.com/JoaoVSerrano/tomhanks)). A Atividade 1[...]
+
