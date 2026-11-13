@@ -53,3 +53,17 @@ Registro de tudo que divergiu do plano (`EXECUCAO.md`) ou que foi decidido duran
 - **Cenário `ativ11.py` com eventos assinados:** com `--webhook-secret` (segredo de TESTE da stack, só pelo terminal) ele simula checkout, falha de pagamento e cancelamento. Não substitui o pagamento com o 4242, feito por `scripts/evidencias/checkout.py`.
 - **Descoberta na validação local:** a stack `oficinaos-dev` precisa ser reconstruída com `-p oficinaos-dev` (o nome padrão do projeto cria imagens `oficinaos-*` que a stack não usa).
 - **Não verificado nesta máquina:** o checkout real e o portal da Stripe (sem chaves de teste aqui). O cenário os pula com `[SKIP]`; `checkout.py` foi exercitado só até a abertura da Stripe.
+
+## OficinaOS v2: orçamento, link do cliente, catálogo, histórico e pagamento
+
+Pedido do João em 12/11/2026: funcionalidades de gestão de oficina, implementadas por subagentes e revisadas por mim, entrando na entrega da A11.
+
+- **Como foi feito:** a base comum (migração `0003_oficina_v2`, ganchos em `backend/ordens.py`, blueprints e fragmentos de Swagger vazios, esqueleto do frontend) veio primeiro, para os três subagentes trabalharem em paralelo sem mexer nos mesmos arquivos (orçamento; catálogo; histórico e financeiro). Revisei o código de cada um antes de juntar na `main`. Os worktrees nasceram de um commit antigo e cada agente avançou a própria branch com `merge --ff-only`; juntei com fast-forward/cherry-pick, sem reescrever histórico publicado.
+- **Orçamento = snapshot dos itens da OS**, sem status "rascunho": os itens da OS já são o rascunho. "Expirado" é calculado pela validade, nunca gravado.
+- **Máquina de estados intacta:** `TRANSICOES` não mudou. Com orçamento enviado, a aprovação direta pelo status responde 409; aprovar é pelo orçamento (`transicionar(..., via_orcamento=True)`), com os mesmos eventos. Orçamento cujo subtotal difere do total atual da OS responde 409 ("desatualizado: reenvie"). Recusar mantém a OS aberta.
+- **Link público:** o banco guarda só o sha256 do token; o caminho devolvido é relativo (o front monta a URL com a própria origem, sem confiar no `Host`). O limite de tentativas é por IP **e** por token, porque o IP vem de `X-Forwarded-For` e pode ser falsificado. A decisão pelo link entra na auditoria da oficina com um ator sintético (cliente sem id).
+- **Anotações são só internas** (sem flag de visível ao cliente); o texto para o cliente é `observacoes_cliente` do orçamento.
+- **Catálogo sem coluna na OS:** o "um clique" acontece no navegador, que manda descrição e valor para a rota de itens que já existia.
+- **Financeiro em regime de caixa:** o faturado conta o dia do pagamento. O desconto vale do orçamento aprovado (`valor_devido`), e pagamentos não passam do devido (OS travada com `with_for_update`). Entregar sem pagar é permitido ("fiado" vira "a receber").
+- **Correção encontrada pelos agentes:** `paraCentavos` transformava "45.90" em 459.000 centavos (removia todos os pontos). Corrigido com teste Vitest.
+- **Limite conhecido:** "a receber" e o histórico fazem consultas por OS (N+1). É aceitável no volume de uma oficina pequena; se crescer, vira uma consulta agregada.

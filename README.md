@@ -186,7 +186,12 @@ O papel e a oficina vêm sempre do `auth-service` (rota `/me`), nunca do corpo o
 | Abrir ordem de serviço | ❌ | ✅ | ✅ (fica atribuída a ele) | ❌ |
 | Ver ordens de serviço | ❌ | todas da oficina | só as atribuídas a ele | só as dos próprios veículos |
 | Editar OS, adicionar itens e fotos | ❌ | ✅ | ✅ (as atribuídas) | ❌ |
-| Aprovar orçamento | ❌ | ✅ | ❌ | ✅ (o próprio veículo) |
+| Enviar orçamento (versões, desconto, validade) | ❌ | ✅ | ❌ | ❌ |
+| Aprovar ou recusar orçamento | ❌ | ✅ (pelo cliente, por telefone) | ❌ | ✅ (o próprio veículo, no app ou pelo link sem login) |
+| Anotações internas da OS | ❌ | ✅ | ✅ (as atribuídas) | ❌ |
+| Catálogo de serviços e peças | ❌ | ✅ | leitura | ❌ |
+| Registrar pagamento e ver o financeiro do mês | ❌ | ✅ | ❌ | ❌ |
+| Histórico do veículo | ❌ | ✅ (com pago e devido) | ✅ (as atribuídas) | ✅ (o próprio veículo, sem valores pagos) |
 | Iniciar serviço e marcar como pronta | ❌ | ✅ | ✅ (as atribuídas) | ❌ |
 | Entregar veículo, cancelar e excluir OS | ❌ | ✅ | ❌ | ❌ |
 | Auditoria da oficina | ❌ | ✅ | ❌ | ❌ |
@@ -195,6 +200,14 @@ O papel e a oficina vêm sempre do `auth-service` (rota `/me`), nunca do corpo o
 **Isolamento:** toda tabela do domínio tem `oficina_id` (direto ou via `os_id`) e toda consulta passa por `backend/escopo.py`. Abrir o ID de outra oficina responde **404** (sem revelar que o registro existe). Sem login, **401**; papel sem permissão, **403**; transição de status inválida, **409**; limite do plano, **402**.
 
 **Status da OS:** `aberta` → `orcamento_aprovado` → `em_servico` → `pronta` → `entregue` (e `cancelada`, só pelo dono, antes de entregar).
+
+### Do orçamento à entrega
+
+- **Catálogo:** o dono cadastra serviços e peças com preço padrão (`/app/catalogo`); na OS, "Adicionar do catálogo" inclui o item com um clique (o valor continua editável).
+- **Orçamento com versões:** os itens da OS são o rascunho. "Enviar orçamento" tira uma foto dos itens com desconto, validade (1 a 90 dias) e observações para o cliente. Reenviar cria a versão seguinte e a anterior deixa de valer. Anotações internas ficam só para dono e mecânico.
+- **Link do cliente:** cada envio gera um link `/orcamento/<token>` (o banco guarda só o hash do token). O cliente abre sem login, imprime ou salva em PDF e aprova ou recusa (com motivo). A resposta pública não traz ids, e-mail nem telefone, não vai para cache e tem limite de tentativas por IP e por link. Link vencido responde 410; versão substituída ou já decidida, 409. Com orçamento enviado, a aprovação só acontece pelo orçamento.
+- **Km, pagamento e histórico:** a OS registra o km de entrada. Com a OS pronta ou entregue, o dono registra os pagamentos (Pix, dinheiro, cartão, boleto) até o valor devido (total menos o desconto aprovado); entregar sem quitar é permitido e o saldo vai para "a receber". O histórico do veículo lista todas as OS com km e datas.
+- **Financeiro do mês** (`/app/financeiro`): faturado pelo dia do pagamento, por forma, OS entregues, ticket médio e o total a receber hoje.
 
 **Cadastro:** "Sou dono" cria a oficina; "Sou mecânico" e "Sou cliente" pedem o **código de convite**, mostrado ao dono na tela Equipe.
 
@@ -243,7 +256,8 @@ pytest tests/ -v          # usa os mesmos envs fictícios do CI (veja .github/wo
 cp .env.example .env      # preencha os valores; nunca versione o .env
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build   # MariaDB local + stack
 ./scripts/build_frontend.sh                                                     # recompila o Angular em backend/static
-python scripts/cenarios/ativ10.py --base-url http://localhost:8080              # cenário de aceite
+python scripts/cenarios/ativ10.py --base-url http://localhost:8080              # cenário de aceite da A10
+python scripts/cenarios/ativ12.py --base-url http://localhost:8080              # orçamento, link, pagamento e financeiro
 ```
 
 No Portainer a stack usa o `docker-compose.yml` (sem o override de desenvolvimento) e o banco MariaDB da turma; as variáveis ficam na seção *Environment* da stack.
