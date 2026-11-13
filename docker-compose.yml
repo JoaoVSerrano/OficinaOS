@@ -214,7 +214,7 @@ services:
     networks:
       - oficinaos-net
     healthcheck:
-      test: ["CMD-SHELL", "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8080/api/health\")' || exit 1"]
+      test: ["CMD-SHELL", "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:$${PORT:-8080}/api/health\")' || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 3
