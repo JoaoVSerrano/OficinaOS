@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Api, reais } from '../core/api';
+import { Api, reais } from '../../core/api';
 
 export interface ItemEscolhido { tipo: 'servico' | 'peca'; descricao: string; valor_unitario_centavos: number }
 

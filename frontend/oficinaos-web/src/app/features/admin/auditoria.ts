@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Api, ApiError } from '../core/api';
+import { Api, ApiError } from '../../core/api';
 
 interface Evento { event_id: string; usuario_id: string | null; usuario_nome?: string | null; acao: string; detalhe: string | null;
   papel?: string | null; oficina_id?: string | null; recurso?: string | null; recurso_id?: string | null; ip?: string | null; ts_ms: number; }

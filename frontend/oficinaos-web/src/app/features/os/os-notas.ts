@@ -1,6 +1,6 @@
 import { Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Api, ApiError, dataHora } from '../core/api';
+import { Api, ApiError, dataHora } from '../../core/api';
 
 export interface NotaOs { id: number; autor_id: number; autor_nome?: string | null; texto: string; criada_em: string | null; }
 

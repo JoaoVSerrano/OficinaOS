@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Api, ApiError } from '../core/api';
+import { Api, ApiError } from '../../core/api';
 import { AUTH_STYLES } from './auth-base';
 
 @Component({

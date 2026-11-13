@@ -1,11 +1,11 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Anexo, Api, ApiError, Os, STATUS_LABEL, dataHora, paraCentavos, reais } from '../core/api';
-import { CatalogoPicker, ItemEscolhido } from '../components/catalogo-picker';
-import { OsNotas } from '../components/os-notas';
-import { OsOrcamento } from '../components/os-orcamento';
-import { OsPagamentos } from '../components/os-pagamentos';
+import { Anexo, Api, ApiError, Os, STATUS_LABEL, dataHora, paraCentavos, reais } from '../../core/api';
+import { CatalogoPicker, ItemEscolhido } from '../catalogo/catalogo-picker';
+import { OsNotas } from './os-notas';
+import { OsOrcamento } from './os-orcamento';
+import { OsPagamentos } from './os-pagamentos';
 
 interface Acao { destino: string; texto: string; papeis: string[]; primaria?: boolean; perigo?: boolean }
 const ACOES: Record<string, Acao[]> = {
@@ -21,6 +21,15 @@ const ACOES: Record<string, Acao[]> = {
 
 @Component({
   selector: 'app-os-detalhe',
+  styles: [`
+    .passos { display: flex; gap: 4px; list-style: none; padding: 0; margin: 0 0 16px; flex-wrap: wrap; }
+    .passos li { flex: 1 1 120px; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--card);
+      border: 1px solid var(--line); color: var(--muted); font-size: .85rem; font-weight: 600; }
+    .passos .bolha { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--line); color: var(--muted); font-size: .78rem; flex: none; }
+    .passos .feito { color: var(--ok); } .passos .feito .bolha { background: var(--ok-soft); color: var(--ok); }
+    .passos .atual { border-color: var(--brand); color: var(--ink); background: var(--brand-soft); }
+    .passos .atual .bolha { background: var(--brand); color: var(--brand-ink); }
+  `],
   imports: [FormsModule, RouterLink, OsOrcamento, OsNotas, CatalogoPicker, OsPagamentos],
   template: `
     @if (naoEncontrada()) {
@@ -42,6 +51,14 @@ const ACOES: Record<string, Acao[]> = {
         @if (limite()) { <div style="margin-top:8px"><a class="btn primary sm" routerLink="/app/plano">Assinar Pro</a></div> }</div> }
       @if (aviso()) { <div class="alert ok" role="status">{{ aviso() }}</div> }
 
+      @if (o.status !== 'cancelada') {
+        <ol class="passos" aria-label="Andamento da ordem de serviço">
+          @for (p of passos; track p; let i = $index) {
+            <li [class.feito]="i < indice()" [class.atual]="i === indice()" [attr.aria-current]="i === indice() ? 'step' : null">
+              <span class="bolha">{{ i < indice() ? '✓' : i + 1 }}</span><span class="rot">{{ rotulo(p) }}</span></li>
+          }
+        </ol>
+      }
       <div class="card">
         <div class="row">
           <div><span class="muted small">Veículo</span><div><strong>{{ o.veiculo?.placa }}</strong> — {{ o.veiculo?.marca }} {{ o.veiculo?.modelo }}</div></div>
@@ -53,9 +70,17 @@ const ACOES: Record<string, Acao[]> = {
         </div>
         <p style="margin-top:12px"><span class="muted small">Problema / serviço</span><br>{{ o.descricao }}</p>
         @if (acoes().length) {
-          <div class="actions">
+          <div class="actions" style="margin-top:4px">
             @for (a of acoes(); track a.destino) {
-              <button class="btn" type="button" [class.primary]="a.primaria" [class.danger]="a.perigo" (click)="mudarStatus(a.destino)">{{ a.texto }}</button>
+              @if (a.perigo && !confirmaCancelar()) {
+                <button class="btn danger" type="button" (click)="confirmaCancelar.set(true)">{{ a.texto }}</button>
+              } @else if (a.perigo) {
+                <span class="small">Cancelar esta ordem de serviço?</span>
+                <button class="btn danger sm" type="button" (click)="mudarStatus(a.destino)">Sim, cancelar</button>
+                <button class="btn sm" type="button" (click)="confirmaCancelar.set(false)">Voltar</button>
+              } @else {
+                <button class="btn primary" type="button" (click)="mudarStatus(a.destino)">{{ a.texto }}</button>
+              }
             }
           </div>
         }
@@ -119,7 +144,9 @@ export class OsDetalhe implements OnInit {
   id = Number(this.route.snapshot.paramMap.get('id'));
   os = signal<Os | null>(null);
   anexos = signal<Anexo[]>([]);
-  naoEncontrada = signal(false); erro = signal(''); limite = signal(false); aviso = signal(''); confirmando = signal(false);
+  naoEncontrada = signal(false); erro = signal(''); limite = signal(false); aviso = signal(''); confirmando = signal(false); confirmaCancelar = signal(false);
+  passos = ['aberta', 'orcamento_aprovado', 'em_servico', 'pronta', 'entregue'];
+  indice = computed(() => this.passos.indexOf(this.os()?.status ?? ''));
   item = { tipo: 'servico', descricao: '', quantidade: 1, valor: '' };
   papel = computed(() => this.api.user()?.role);
   ehDono = computed(() => this.papel() === 'dono');

@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ItemCatalogo, TIPO_LABEL, normalizar } from '../components/catalogo-picker';
-import { Api, ApiError, paraCentavos, reais } from '../core/api';
+import { ItemCatalogo, TIPO_LABEL, normalizar } from './catalogo-picker';
+import { Api, ApiError, paraCentavos, reais } from '../../core/api';
 
 type Tipo = ItemCatalogo['tipo'];
 

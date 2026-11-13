@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Api, ApiError, PAPEL_LABEL } from '../core/api';
+import { Api, ApiError, PAPEL_LABEL } from '../../core/api';
 
 @Component({
   selector: 'app-perfil',

@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Api, ApiError, Os, paraCentavos, reais } from '../core/api';
+import { Api, ApiError, Os, paraCentavos, reais } from '../../core/api';
 
 export interface Pagamento {
   id: number; valor_centavos: number; forma: string; pago_em: string; observacao: string | null; registrado_por: number;

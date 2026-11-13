@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Api, ApiError, reais } from '../core/api';
-import { FORMA_LABEL, hojeBrasilia } from '../components/os-pagamentos';
+import { Api, ApiError, reais } from '../../core/api';
+import { FORMA_LABEL, hojeBrasilia } from '../os/os-pagamentos';
 
 interface Resumo {
   mes: string; faturado_centavos: number; por_forma: Record<string, number>; os_entregues: number;

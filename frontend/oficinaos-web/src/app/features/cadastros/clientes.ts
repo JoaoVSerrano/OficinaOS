@@ -1,14 +1,17 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Api, ApiError, Cliente } from '../core/api';
+import { Api, ApiError, Cliente } from '../../core/api';
 
 @Component({
   selector: 'app-clientes',
   imports: [FormsModule],
   template: `
-    <h1>Clientes</h1>
+    <div class="page-head">
+      <div><h1>Clientes</h1><p class="muted">{{ clientes().length }} cadastrado(s)</p></div>
+      @if (ehDono() && !formAberto()) { <button class="btn primary" type="button" (click)="formAberto.set(true)">+ Novo cliente</button> }
+    </div>
     @if (erro()) { <div class="alert err" role="alert">{{ erro() }}</div> }
-    @if (ehDono()) {
+    @if (ehDono() && (formAberto() || editando() || clientes().length === 0)) {
       <form class="card" (ngSubmit)="salvar()">
         <h2>{{ editando() ? 'Editar cliente' : 'Novo cliente' }}</h2>
         <div class="row">
@@ -19,6 +22,7 @@ import { Api, ApiError, Cliente } from '../core/api';
         <div class="actions" style="margin-top:10px">
           <button class="btn primary" type="submit">{{ editando() ? 'Salvar' : 'Cadastrar cliente' }}</button>
           @if (editando()) { <button class="btn" type="button" (click)="cancelar()">Cancelar</button> }
+          @else if (clientes().length) { <button class="btn" type="button" (click)="formAberto.set(false)">Fechar</button> }
         </div>
       </form>
     }
@@ -40,6 +44,7 @@ import { Api, ApiError, Cliente } from '../core/api';
   `,
 })
 export class Clientes implements OnInit {
+  formAberto = signal(false);
   private api = inject(Api);
   clientes = signal<Cliente[]>([]);
   erro = signal(''); editando = signal<number | null>(null);
@@ -60,7 +65,7 @@ export class Clientes implements OnInit {
     } catch (e) { this.erro.set((e as ApiError).message); }
   }
   editar(c: Cliente) { this.editando.set(c.id); this.form = { nome: c.nome, telefone: c.telefone ?? '', email: c.email ?? '' }; }
-  cancelar() { this.editando.set(null); this.form = { nome: '', telefone: '', email: '' }; }
+  cancelar() { this.formAberto.set(false); this.editando.set(null); this.form = { nome: '', telefone: '', email: '' }; }
   async remover(c: Cliente) {
     this.erro.set('');
     try { await this.api.delete('/api/clientes/' + c.id); await this.carregar(); }

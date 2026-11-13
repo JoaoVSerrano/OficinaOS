@@ -1,7 +1,7 @@
 import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Api, ApiError, Os, dataHora, paraCentavos, reais } from '../core/api';
+import { Api, ApiError, Os, dataHora, paraCentavos, reais } from '../../core/api';
 
 export type OrcamentoStatus = 'enviado' | 'aprovado' | 'recusado' | 'substituido';
 

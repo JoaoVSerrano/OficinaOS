@@ -1,8 +1,8 @@
 import { Component, OnInit, ViewEncapsulation, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Api, ApiError, Os, dataHora, reais } from '../core/api';
-import { ORC_STATUS_LABEL, Orcamento, OrcamentoBase, OrcamentoStatus, dataCurta } from '../components/os-orcamento';
+import { Api, ApiError, Os, dataHora, reais } from '../../core/api';
+import { ORC_STATUS_LABEL, Orcamento, OrcamentoBase, OrcamentoStatus, dataCurta } from './os-orcamento';
 
 /** Resposta de GET /api/publico/orcamentos/:token (sem ids nem contato). */
 interface OrcamentoPublico {

@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { Api, ApiError, dataHora, reais } from '../core/api';
+import { Api, ApiError, dataHora, reais } from '../../core/api';
 
 interface Painel {
   oficinas_por_plano: { free: number; pro: number };

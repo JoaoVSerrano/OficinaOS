@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Api, ApiError, STATUS_LABEL, dataHora, reais } from '../core/api';
+import { Api, ApiError, STATUS_LABEL, dataHora, reais } from '../../core/api';
 
 interface OsHistorico {
   id: number; status: string; descricao: string; km_entrada: number | null; criada_em: string;

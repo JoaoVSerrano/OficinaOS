@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { Api, ApiError } from '../core/api';
+import { Api, ApiError } from '../../core/api';
 import { AUTH_STYLES } from './auth-base';
 
 type Tipo = 'dono' | 'mecanico' | 'cliente';

@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Api, ApiError, Os, Veiculo } from '../core/api';
+import { Api, ApiError, Os, Veiculo } from '../../core/api';
 
 @Component({
   selector: 'app-os-form',

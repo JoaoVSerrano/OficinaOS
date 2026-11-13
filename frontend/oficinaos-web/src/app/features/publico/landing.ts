@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Api } from '../core/api';
+import { Api } from '../../core/api';
 
 @Component({
   selector: 'app-landing',
@@ -17,6 +17,11 @@ import { Api } from '../core/api';
     .planos { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); max-width: 720px; margin: 0 auto; }
     .planos .destaque { border: 2px solid var(--brand); }
     .preco { font-size: 1.8rem; font-weight: 800; } ul { padding-left: 1.1rem; margin: .5rem 0 1rem; } li { margin: .25rem 0; }
+    .passos { list-style: none; padding: 0; margin: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .passos li { display: flex; gap: 14px; align-items: flex-start; }
+    .passos .n { flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); font-weight: 800; display: grid; place-items: center; }
+    .passos h3 { margin-bottom: .2rem; } .passos p { margin: 0; }
+    .cta-final { text-align: center; background: var(--brand-soft); border: 1px solid var(--line); border-radius: var(--radius); padding: 32px 16px; margin: 16px 0 32px; }
     section { padding: 24px 0; } section > h2 { text-align: center; margin-bottom: 1.2rem; font-size: 1.5rem; }
     footer { border-top: 1px solid var(--line); padding: 24px 0; text-align: center; color: var(--muted); font-size: .9rem; }
   `],
@@ -50,6 +55,15 @@ import { Api } from '../core/api';
           </div>
         </section>
 
+        <section aria-labelledby="como">
+          <h2 id="como">Como funciona</h2>
+          <ol class="passos">
+            <li><span class="n">1</span><div><h3>Cadastre a oficina</h3><p class="muted">Crie a conta, dê um nome à oficina e convide mecânicos com um código.</p></div></li>
+            <li><span class="n">2</span><div><h3>Abra a ordem de serviço</h3><p class="muted">Escolha o cliente e o veículo, descreva o problema e monte o orçamento com o catálogo.</p></div></li>
+            <li><span class="n">3</span><div><h3>Envie o link ao cliente</h3><p class="muted">Ele aprova pelo celular, sem instalar nada. Você acompanha até a entrega e o pagamento.</p></div></li>
+          </ol>
+        </section>
+
         <section aria-labelledby="planos">
           <h2 id="planos">Planos</h2>
           <div class="planos">
@@ -61,6 +75,11 @@ import { Api } from '../core/api';
               <a class="btn primary block" routerLink="/cadastro">Começar no Free e assinar depois</a></div>
           </div>
         </section>
+        <div class="cta-final">
+          <h2>Pronto para organizar a oficina?</h2>
+          <p class="muted">Comece no plano Free, sem cartão. Assine o Pro quando precisar de mais.</p>
+          <a class="btn primary" routerLink="/cadastro">Criar conta grátis</a>
+        </div>
       </div>
     </main>
     <footer>

@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { Api, ApiError, dataHora, reais } from '../core/api';
+import { Api, ApiError, dataHora, reais } from '../../core/api';
 
 type Retorno = 'ok' | 'cancelada' | '';
 

@@ -15,6 +15,12 @@
     --info: #7ab0ff; --info-soft: #111f38; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.35);
   }
 }
+:root[data-theme='dark'] {
+    --bg: #0f1218; --card: #171b23; --ink: #eef1f6; --muted: #9aa4b2; --line: #2a303b;
+    --brand: #ff8a4c; --brand-ink: #1a0d05; --brand-soft: #2a1a10; --brand-dark: #ffa670;
+    --ok: #4cc98a; --ok-soft: #12261c; --warn: #f0b24a; --warn-soft: #2a2110; --bad: #ff8a80; --bad-soft: #2d1614;
+    --info: #7ab0ff; --info-soft: #111f38; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.35);
+  }
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
 body { background: var(--bg); color: var(--ink); font-family: var(--font); line-height: 1.5; -webkit-font-smoothing: antialiased; }
@@ -23,7 +29,7 @@ h1, h2, h3 { line-height: 1.2; margin: 0 0 .5rem; }
 h1 { font-size: 1.6rem; } h2 { font-size: 1.2rem; } h3 { font-size: 1rem; }
 p { margin: 0 0 .75rem; }
 .muted { color: var(--muted); } .small { font-size: .85rem; } .right { text-align: right; } .nowrap { white-space: nowrap; }
-.container { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+.container { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 16px; }
 
 /* botões e campos */
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -70,3 +76,34 @@ tr.click { cursor: pointer; } tr.click:hover td { background: var(--brand-soft);
 .thumbs img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); background: var(--line); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (prefers-reduced-motion: no-preference) { .btn { transition: background .15s, border-color .15s; } }
+
+/* ---- cabeçalho de página, contadores, busca, cartões em lista ---- */
+.skip { position: absolute; left: 8px; top: -48px; background: var(--brand); color: var(--brand-ink); padding: .5rem 1rem; border-radius: 8px; z-index: 20; font-weight: 700; text-decoration: none; }
+.skip:focus { top: 8px; }
+.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.page-head h1 { margin: 0; } .page-head p { margin: .2rem 0 0; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.chip { display: inline-flex; align-items: center; gap: .4rem; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  padding: .3rem .8rem; border-radius: 999px; font-weight: 600; font-size: .88rem; cursor: pointer; min-height: 34px; }
+.chip:hover { border-color: var(--muted); }
+.chip[aria-pressed='true'] { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.chip .n { font-size: .78rem; opacity: .8; font-variant-numeric: tabular-nums; }
+.search { position: relative; max-width: 420px; margin-bottom: 12px; }
+.search input { padding-left: 2.2rem; }
+.search svg { position: absolute; left: .7rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
+.badge::before { content: ''; display: inline-block; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; margin-right: .4rem; vertical-align: middle; }
+.stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 16px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.stat .v { font-size: 1.6rem; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.stat .r { color: var(--muted); font-size: .85rem; }
+.lista-cards { display: none; }
+.os-card { display: block; border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px; text-decoration: none; color: inherit; background: var(--card); }
+.os-card:hover { border-color: var(--brand); }
+.os-card .topo { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 4px; }
+.os-card .placa { font-weight: 800; margin-right: .3rem; }
+@media (max-width: 720px) {
+  .tabela-os { display: none; }
+  .lista-cards { display: block; }
+  h1 { font-size: 1.35rem; }
+  .card { padding: 14px; }
+}

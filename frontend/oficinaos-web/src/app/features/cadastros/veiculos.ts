@@ -1,7 +1,7 @@
 import { RouterLink } from '@angular/router';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Api, ApiError, Cliente, Veiculo } from '../core/api';
+import { Api, ApiError, Cliente, Veiculo } from '../../core/api';
 
 @Component({
   selector: 'app-veiculos',
