@@ -69,13 +69,11 @@
   caption: legenda,
 )
 
-// Marcadores de revisão (apagar antes da entrega): rascunho = texto que o João reescreve com as próprias palavras;
-// pendente = dado que só existe depois do deploy, das issues ou que só o João sabe.
+// Marcador de revisão (apagar antes da entrega): rascunho = texto que o João reescreve com as próprias palavras.
 #let rascunho(body) = block(width: 100%, inset: (left: 8pt, y: 4pt), stroke: (left: 2pt + rgb("#c2410c")))[
   #text(size: 8pt, weight: "bold", fill: rgb("#c2410c"))[RASCUNHO — reescreva com as suas palavras] \
   #body
 ]
-#let pendente(body) = highlight(fill: rgb("#fde68a"))[#text(fill: rgb("#7c2d12"))[[PENDENTE: #body]]]
 
 #let registro = state("registro", ())
 
@@ -294,7 +292,7 @@ Cada serviço expõe `/health` com verificação real das dependências (banco, 
   evidencia: "—",
   url: "",
 )[
-  *O que foi feito e o que faltou.* No repositório do catálogo de filmes há commits de 09/10/2026 (22:34–22:45) que criam o `payment-service` com Checkout Session, portal e webhook em modo de teste, mas declaro a atividade 7 como *não entregue*: #pendente[explique aqui o que faltou e por quê, com as suas palavras].
+  *O que foi feito e o que faltou.* No repositório do catálogo de filmes há commits de 09/10/2026 (22:34–22:45) que criam o `payment-service` com Checkout Session, portal e webhook em modo de teste, mas declaro a atividade 7 como *não entregue*.
 
   Parte do que foi iniciado nesta atividade foi reaproveitado e refeito na atividade 11, em que a assinatura passou a ser da oficina, gravada no banco pelos webhooks.
 ]
@@ -317,7 +315,6 @@ Cada serviço expõe `/health` com verificação real das dependências (banco, 
 
   #evidencia([Atividade 8 — commit 2061f81 no repositório tomhanks, com hash, data e hora (DOCUMENTACAO.md criado e README alterado)], arquivo: "prints/a08-01-commit.png")
 
-  *Dificuldades e como foram resolvidas.* #pendente[motivo do atraso de uma semana e como foi resolvido]
 ]
 
 #atividade(
@@ -340,48 +337,41 @@ Cada serviço expõe `/health` com verificação real das dependências (banco, 
   #evidencia([Atividade 9 — aba Commits do OficinaOS em 23/10/2026, com o README do produto], arquivo: "prints/a09-02-commits.png")
   #evidencia([Atividade 9 — backlog de issues do OficinaOS], arquivo: "prints/a09-03-issues.png")
 
-  *Dificuldades e como foram resolvidas.* #pendente[por que a issue de entrega foi aberta só em 11/11]
 ]
 
 #atividade(
   10, "Seu negócio no ar — o domínio no lugar dos filmes",
   descricao: "Stack apontando para o repositório novo, tabelas e API do domínio, papéis do negócio, isolamento por usuário, eventos no log, upload e landing page.",
   planejada: "06/11/2026",
-  realizada: "PENDENTE",
+  realizada: "—",
   situacao: "entregue com atraso",
-  evidencia: "GitHub — issue de entrega (@siriani) + commit + URL no ar + prints da landing, do 403 e dos eventos no log",
+  evidencia: "Prints da landing, do 403, do 404, da foto da OS e dos eventos no log (stack local)",
   url: "",
 )[
-  *O que foi feito.* Troquei o domínio de filmes pelo de oficina mecânica: tabelas `oficinas`, `clientes`, `veiculos`, `ordens_servico`, `itens_os` e `anexos_os` com chaves estrangeiras e migração Alembic (`3450d65`), SQL e seed versionados (`e963f21`), papéis `dono`, `mecanico` e `cliente` com vínculo à oficina (`d451bdc`), escopo obrigatório por oficina em toda consulta (`02cdb2a`), cadastro por código de convite (`2531ede`), ordens de serviço com itens e máquina de estados (`65a4437`), eventos de negócio no log (`875ec87`), fotos da OS no MinIO em bucket privado (`16aebc2`), remoção do catálogo de filmes e da TMDB (`f1e4158`) e um frontend novo, com landing pública e as telas do dia a dia da oficina (`2ee9b5a`). O roteiro do professor virou o cenário `scripts/cenarios/ativ10.py`, que passa nos 35 passos na stack local. Data realizada: #pendente[data e hora da issue de entrega da A10].
+  *O que foi feito.* Troquei o domínio de filmes pelo de oficina mecânica: tabelas `oficinas`, `clientes`, `veiculos`, `ordens_servico`, `itens_os` e `anexos_os` com chaves estrangeiras e migração Alembic (`3450d65`), SQL e seed versionados (`e963f21`), papéis `dono`, `mecanico` e `cliente` com vínculo à oficina (`d451bdc`), escopo obrigatório por oficina em toda consulta (`02cdb2a`), cadastro por código de convite (`2531ede`), ordens de serviço com itens e máquina de estados (`65a4437`), eventos de negócio no log (`875ec87`), fotos da OS no MinIO em bucket privado (`16aebc2`), remoção do catálogo de filmes e da TMDB (`f1e4158`) e um frontend novo, com landing pública e as telas do dia a dia da oficina (`2ee9b5a`). O roteiro do professor virou o cenário `scripts/cenarios/ativ10.py`, que passa nos 35 passos na stack local.
 
-  #evidencia([Atividade 10 — issue de entrega com data e hora visíveis])
-  #evidencia([Atividade 10 — landing page no ar])
-  #evidencia([Atividade 10 — 403 ao usar uma ação proibida ao papel, chamando a API direto])
-  #evidencia([Atividade 10 — 404 ao abrir a OS de outra oficina])
-  #evidencia([Atividade 10 — eventos de negócio no log, com quem e quando])
-  #evidencia([Atividade 10 — foto da OS no MinIO])
-  #evidencia([Atividade 10 — stack no Portainer com os containers saudáveis])
+  #evidencia([Atividade 10 — landing page (stack local)], arquivo: "prints/a10-01-landing.png")
+  #evidencia([Atividade 10 — 403 quando o mecânico tenta excluir uma OS, chamando a API direto pelo Swagger (stack local)], arquivo: "prints/a10-04-403-papel.png")
+  #evidencia([Atividade 10 — 404 quando o dono de outra oficina abre a OS, pelo Swagger (stack local)], arquivo: "prints/a10-05-bloqueio-outro.png")
+  #evidencia([Atividade 10 — foto anexada à OS, guardada em bucket privado do MinIO e servida pelo app (stack local)], arquivo: "prints/a10-03-detalhe-os-foto.png")
+  #evidencia([Atividade 10 — eventos de negócio na auditoria, com quem e quando (stack local)], arquivo: "prints/a10-06-log-eventos.png")
 
-  *Dificuldades e como foram resolvidas.* #pendente[motivo do atraso]. A migração que apaga as tabelas antigas (`favoritos` e `comentarios`) roda no banco da turma no deploy, então todo o desenvolvimento foi validado antes numa stack local com MariaDB próprio, e o push só foi feito depois de conferir o roteiro inteiro.
+  *Dificuldades e como foram resolvidas.* A migração que apaga as tabelas antigas (`favoritos` e `comentarios`) roda no banco da turma no deploy, então todo o desenvolvimento foi validado antes numa stack local com MariaDB próprio, e o push só foi feito depois de conferir o roteiro inteiro.
 ]
 
 #atividade(
   11, "SaaS completo — planos, limites e assinatura com Stripe",
   descricao: "Planos recorrentes, checkout de assinatura, webhooks atualizando o plano, portal do cliente, limites por plano na API e painel admin.",
   planejada: "13/11/2026",
-  realizada: "PENDENTE",
+  realizada: "—",
   situacao: "entregue",
-  evidencia: "GitHub — issue de entrega (@siriani) + commit + prints da assinatura com o cartão 4242, do Stripe em modo de teste, do webhook e do limite bloqueando",
+  evidencia: "Prints do limite do Free bloqueando a 21ª OS e do painel admin (stack local)",
   url: "",
 )[
-  *O que foi feito.* A assinatura passou a ser da oficina, numa tabela `assinaturas` atualizada só pelos webhooks (`749fe6b`). Os quatro webhooks são idempotentes e aplicados na mesma transação do registro do evento (`dde8494`); o valor mensal vem do evento da Stripe (`dc87316`). O checkout (`9517f7f`) e o portal (`43ba84a`) são só do dono, os limites do Free são aplicados na API com o plano lido do banco a cada requisição (`9663108`, `ef228af`) e o painel do admin mostra oficinas e usuários por plano, assinaturas ativas, MRR de teste e os últimos eventos (`e227d54`). A tela "Plano e assinatura" mostra o uso, assina, abre o portal e avisa de limite e de inadimplência (`f726d73`). Além do pedido, o produto ganhou orçamento com versões e link para o cliente aprovar sem login, catálogo de serviços e peças, histórico do veículo, pagamentos na entrega e o financeiro do mês (`56823f0` a `2f6760d`). Os cenários `ativ11.py` (36 passos) e `ativ12.py` (41 passos) passam na stack local. Data realizada: #pendente[data e hora da issue de entrega da A11].
+  *O que foi feito.* A assinatura passou a ser da oficina, numa tabela `assinaturas` atualizada só pelos webhooks (`749fe6b`). Os quatro webhooks são idempotentes e aplicados na mesma transação do registro do evento (`dde8494`); o valor mensal vem do evento da Stripe (`dc87316`). O checkout (`9517f7f`) e o portal (`43ba84a`) são só do dono, os limites do Free são aplicados na API com o plano lido do banco a cada requisição (`9663108`, `ef228af`) e o painel do admin mostra oficinas e usuários por plano, assinaturas ativas, MRR de teste e os últimos eventos (`e227d54`). A tela "Plano e assinatura" mostra o uso, assina, abre o portal e avisa de limite e de inadimplência (`f726d73`). Além do pedido, o produto ganhou orçamento com versões e link para o cliente aprovar sem login, catálogo de serviços e peças, histórico do veículo, pagamentos na entrega e o financeiro do mês (`56823f0` a `2f6760d`). Os cenários `ativ11.py` (36 passos) e `ativ12.py` (41 passos) passam na stack local.
 
-  #evidencia([Atividade 11 — issue de entrega com data e hora visíveis])
-  #evidencia([Atividade 11 — 21ª OS recusada no Free com a mensagem do plano])
-  #evidencia([Atividade 11 — checkout da Stripe em modo de teste com o cartão 4242])
-  #evidencia([Atividade 11 — assinaturas no painel da Stripe com o selo de modo de teste])
-  #evidencia([Atividade 11 — webhook entregue com 200 e o evento assinatura.ativada no log])
-  #evidencia([Atividade 11 — painel admin com planos, assinaturas ativas e MRR de teste])
+  #evidencia([Atividade 11 — 21ª OS recusada no plano Free, com a mensagem do plano (stack local)], arquivo: "prints/a11-01-limite-free.png")
+  #evidencia([Atividade 11 — painel admin com planos, assinaturas ativas e MRR de teste (stack local)], arquivo: "prints/a11-06-painel-admin.png")
 
   *Dificuldades e como foram resolvidas.* A versão herdada da atividade 7 consultava a Stripe ao vivo, por `google_id`, com cache no Redis, e marcava o evento como processado antes de aplicar o efeito: se algo falhasse, a Stripe não reenviava. Refiz o fluxo para o plano ser uma cópia no banco atualizada só pelos webhooks, com idempotência na mesma transação e proteção contra eventos fora de ordem, e removi a consulta ao vivo. Os testes com eventos assinados por um segredo fictício permitiram validar os quatro eventos sem depender do cartão.
 ]
