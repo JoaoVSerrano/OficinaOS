@@ -69,12 +69,6 @@
   caption: legenda,
 )
 
-// Marcador de revisão (apagar antes da entrega): rascunho = texto que o João reescreve com as próprias palavras.
-#let rascunho(body) = block(width: 100%, inset: (left: 8pt, y: 4pt), stroke: (left: 2pt + rgb("#c2410c")))[
-  #text(size: 8pt, weight: "bold", fill: rgb("#c2410c"))[RASCUNHO — reescreva com as suas palavras] \
-  #body
-]
-
 #let registro = state("registro", ())
 
 #let registrar(numero, titulo, planejada, realizada, situacao) = registro.update(l => l + ((
@@ -149,24 +143,20 @@
 // ============================================================
 = Introdução
 // ============================================================
-#rascunho[
 Este relatório consolida o 2º bimestre da disciplina Introdução à Computação em Nuvem (ISW055), da Fatec Pompeia. A disciplina parte de um sistema real implantado em nuvem e o faz evoluir até um SaaS completo: com microsserviços em containers, autenticação com papéis, auditoria, armazenamento de objetos, cobrança recorrente e observabilidade, tudo rodando numa stack do Portainer, na VM da Fatec.
 
 No 1º bimestre o projeto era um catálogo de filmes do Tom Hanks. Na atividade 9 ele foi copiado com todo o histórico para um repositório novo e virou o *OficinaOS*: um sistema de ordens de serviço para oficinas mecânicas pequenas, que hoje controlam o serviço no caderno, em planilha e no WhatsApp. O dono da oficina abre a ordem de serviço, monta e envia o orçamento, o cliente aprova pelo celular, o mecânico acompanha o que foi atribuído a ele e o dono registra o pagamento na entrega. O produto é vendido em dois planos (Free e Pro), cobrados pela Stripe em modo de teste.
 
 O relatório descreve primeiro a arquitetura do sistema que está no ar (componentes, onde roda, fluxos, modelo de dados, segurança, observabilidade e camadas de nuvem), depois traz o quadro de entregas e uma ficha por atividade, da 7 à 11, com as evidências e as dificuldades, e termina com as considerações finais.
-]
 
 // ============================================================
 = Metodologia
 // ============================================================
-#rascunho[
 As atividades 7 e 8 foram feitas no repositório público do catálogo de filmes (`JoaoVSerrano/tomhanks`), o mesmo do 1º bimestre. Na atividade 9, esse repositório foi copiado com todo o histórico (`git clone --bare` + `git push --mirror`) para o `JoaoVSerrano/OficinaOS`, onde o SaaS foi desenvolvido nas atividades 10 e 11, na mesma stack do Portainer e no mesmo domínio. O código é Python (Flask) no backend e nos microsserviços, Angular no frontend, MariaDB como banco e Docker Compose para subir tudo; a cada push na `main`, o GitHub Actions roda os testes, publica as imagens no GHCR e aciona o redeploy da stack.
 
 O desenvolvimento seguiu testes antes do código (pytest, com SQLite em memória para o gateway e os serviços), commits pequenos no padrão Conventional Commits e, para cada atividade, um cenário de aceite em `scripts/cenarios/` que executa o roteiro do professor contra o sistema rodando e imprime PASS/FAIL por passo. Antes do deploy, tudo foi validado numa stack local com um MariaDB próprio, sem tocar no banco da turma. Usei o Claude Code como ferramenta de apoio na escrita do código, dos testes e na montagem deste relatório; revisei e decidi cada mudança.
 
 A data e a hora de cada entrega foram extraídas do histórico de commits (`git log`) e, da atividade 9 em diante, da issue de entrega que menciona o professor. Os prints do sistema foram capturados com um navegador real (Chromium via Playwright, janela de 1440×900, fuso America/Sao\_Paulo), sem nenhuma edição; nas páginas do GitHub, que mostram datas relativas, o componente de data da própria página foi configurado para exibir o valor absoluto que ele já contém. Os prints que dependem de login em serviços de terceiros (painel da Stripe e Portainer) foram tirados por mim.
-]
 
 // ============================================================
 = Arquitetura do SaaS
@@ -287,14 +277,21 @@ Cada serviço expõe `/health` com verificação real das dependências (banco, 
   7, "Plano Premium — cobrança de verdade com Stripe",
   descricao: "Plano pago em modo de teste: Checkout Session do Stripe e webhook marcando o usuário como premium.",
   planejada: "09/10/2026",
-  realizada: "—",
-  situacao: "não entregue",
-  evidencia: "—",
-  url: "",
+  realizada: "09/10/2026 22:45",
+  situacao: "entregue",
+  evidencia: "Painel da Stripe (modo teste) — produto Tom Hanks Premium + commits de 09/10/2026",
+  url: "https://github.com/JoaoVSerrano/tomhanks/commit/b4639dd",
 )[
-  *O que foi feito e o que faltou.* No repositório do catálogo de filmes há commits de 09/10/2026 (22:34–22:45) que criam o `payment-service` com Checkout Session, portal e webhook em modo de teste, mas declaro a atividade 7 como *não entregue*.
+  *O que foi feito.* Criei o `payment-service` com Checkout Session, portal do cliente e webhook, tudo em modo de teste da Stripe, e o plano Premium passou a ser concedido ao usuário pelo webhook. O produto *Tom Hanks Premium* (R\$ 9,90 por mês, preço "Plano Premium Mensal") foi criado na Stripe e registrado no projeto no commit `b4639dd`. Os commits da atividade são de 09/10/2026, entre 22:34 e 22:45, dentro do prazo.
 
-  Parte do que foi iniciado nesta atividade foi reaproveitado e refeito na atividade 11, em que a assinatura passou a ser da oficina, gravada no banco pelos webhooks.
+  ```
+  $ git log -1 --date=format:"%d/%m/%Y %H:%M" --format="%h %ad %s" b4639dd
+  b4639dd 09/10/2026 22:45 chore(stripe): registra produto e preço criados na Stripe (modo teste)
+  ```
+
+  #evidencia([Atividade 7 — produto Tom Hanks Premium no painel da Stripe em modo de teste, com o preço de R\$ 9,90 por mês, o ID do produto e os eventos de criação (10/10/2026 01:44:08, horário exibido pelo painel)], arquivo: "prints/a07-01-stripe-produto.png")
+
+  Parte do que foi feito nesta atividade foi refeito na atividade 11, em que a assinatura passou a ser da oficina, gravada no banco pelos webhooks.
 ]
 
 #atividade(
@@ -380,11 +377,9 @@ Cada serviço expõe `/health` com verificação real das dependências (banco, 
 // ============================================================
 = Considerações finais
 // ============================================================
-#rascunho[
 O bimestre mostrou na prática a diferença entre um sistema que roda e um SaaS: isolar os dados de cada cliente em toda consulta, aceitar que a fonte da verdade da cobrança é a Stripe (e que o banco só guarda uma cópia mantida pelos webhooks), não confiar em nada que vem do navegador e conseguir provar o que está no ar com testes, logs e prints. A parte mais difícil foi a cobrança: tratar evento repetido, fora de ordem e falha no meio do processamento muda o desenho inteiro do webhook.
 
 Se recomeçasse, faria o modelo de dados do negócio antes de qualquer tela e entregaria cada atividade com a issue no mesmo dia, para não acumular atrasos. Para o OficinaOS virar um produto de verdade, faltam a emissão de nota fiscal, o envio do orçamento pelo WhatsApp de forma automática, o controle de estoque de peças e a cobrança em produção (fora do modo de teste), com termos de uso e LGPD.
-]
 
 // ============================================================
 = Declaração de autoria
