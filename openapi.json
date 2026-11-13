@@ -47,6 +47,22 @@
     {
       "name": "Planos e Assinatura",
       "description": "Planos Free/Pro, checkout, portal e webhooks (Stripe, modo de teste)"
+    },
+    {
+      "name": "Orçamento",
+      "description": "Versões do orçamento da OS, decisão pelo app e anotações internas"
+    },
+    {
+      "name": "Orçamento público",
+      "description": "Link do orçamento para o cliente: NÃO exige login (o token do link é a credencial); sem ids nem dados de contato; no-store"
+    },
+    {
+      "name": "Catálogo",
+      "description": "Catálogo de serviços e peças da oficina (tabela de preços, valores em centavos)"
+    },
+    {
+      "name": "Histórico e Financeiro",
+      "description": "Histórico do veículo, pagamentos recebidos nas OS e resumo financeiro do mês"
     }
   ],
   "paths": {
@@ -1608,6 +1624,9 @@
                   },
                   "mecanico_id": {
                     "type": "integer"
+                  },
+                  "km_entrada": {
+                    "type": "integer"
                   }
                 }
               }
@@ -1655,7 +1674,7 @@
         "tags": [
           "Ordens de Serviço"
         ],
-        "summary": "Editar descrição e mecânico da OS",
+        "summary": "Editar descrição, km de entrada e mecânico da OS",
         "description": "Papéis permitidos: dono, mecanico (atribuída). A permissão é verificada no backend.",
         "responses": {
           "200": {
@@ -1691,6 +1710,9 @@
                     "type": "string"
                   },
                   "mecanico_id": {
+                    "type": "integer"
+                  },
+                  "km_entrada": {
                     "type": "integer"
                   }
                 }
@@ -2106,6 +2128,753 @@
             "required": true,
             "schema": {
               "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/os/{os_id}/orcamentos": {
+      "get": {
+        "tags": [
+          "Orçamento"
+        ],
+        "summary": "Listar as versões do orçamento (mais nova primeiro; nunca expõe o token)",
+        "description": "Papéis permitidos: dono, mecanico (atribuídas), cliente (próprias). A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Orçamento"
+        ],
+        "summary": "Enviar nova versão do orçamento ao cliente (snapshot dos itens)",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend. Só com a OS aberta e subtotal > 0. A versão enviada anterior vira 'substituido'. Devolve o link relativo /orcamento/<token>, mostrado só nesta resposta.",
+        "responses": {
+          "201": {
+            "description": "Criado"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "desconto_centavos": {
+                    "type": "integer"
+                  },
+                  "validade_dias": {
+                    "type": "integer"
+                  },
+                  "observacoes_cliente": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/os/{os_id}/orcamentos/{orcamento_id}/decisao": {
+      "post": {
+        "tags": [
+          "Orçamento"
+        ],
+        "summary": "Aprovar ou recusar o orçamento pelo app",
+        "description": "Papéis permitidos: dono, cliente (da própria OS). A permissão é verificada no backend. acao: 'aprovar' | 'recusar' (motivo de 3 a 500 caracteres). Versão substituída, já decidida ou desatualizada => 409; expirada => 410. Aprovar leva a OS a orcamento_aprovado.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          },
+          "410": {
+            "description": "Expirado (prazo de validade vencido)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "acao": {
+                    "type": "string"
+                  },
+                  "motivo": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "orcamento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/publico/orcamentos/{token}": {
+      "get": {
+        "tags": [
+          "Orçamento público"
+        ],
+        "summary": "Ver o orçamento pelo link (sem login)",
+        "description": "Papéis permitidos: público (sem login). A permissão é verificada no backend. Rota pública: NÃO exige login. O token do link é a credencial (o banco guarda só o sha256). Limite de 30 req/min por IP e 10 req/min por token (429). Resposta sempre com Cache-Control: no-store e sem ids, e-mail, telefone ou notas.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "429": {
+            "description": "Muitas tentativas; aguarde um minuto"
+          }
+        },
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/publico/orcamentos/{token}/decisao": {
+      "post": {
+        "tags": [
+          "Orçamento público"
+        ],
+        "summary": "Aprovar ou recusar o orçamento pelo link (sem login)",
+        "description": "Papéis permitidos: público (sem login). A permissão é verificada no backend. Rota pública: NÃO exige login. O token do link é a credencial (o banco guarda só o sha256). Limite de 30 req/min por IP e 10 req/min por token (429). Resposta sempre com Cache-Control: no-store e sem ids, e-mail, telefone ou notas. Mesmas regras da decisão pelo app; o evento vai para a auditoria da oficina.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          },
+          "410": {
+            "description": "Expirado (prazo de validade vencido)"
+          },
+          "429": {
+            "description": "Muitas tentativas; aguarde um minuto"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "acao": {
+                    "type": "string"
+                  },
+                  "motivo": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/os/{os_id}/notas": {
+      "get": {
+        "tags": [
+          "Orçamento"
+        ],
+        "summary": "Listar anotações internas da OS (o cliente não vê)",
+        "description": "Papéis permitidos: dono, mecanico (atribuídas). A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Orçamento"
+        ],
+        "summary": "Adicionar anotação interna",
+        "description": "Papéis permitidos: dono, mecanico (atribuídas). A permissão é verificada no backend.",
+        "responses": {
+          "201": {
+            "description": "Criado"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "texto": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/catalogo": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Listar itens do catálogo (só os ativos, ordenados por tipo e descrição)",
+        "description": "Papéis permitidos: dono, mecanico (leitura). A permissão é verificada no backend. ?todos=1 inclui os inativos, só para o dono (ignorado para o mecânico).",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "todos",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            },
+            "description": "1 inclui itens inativos (só para o dono)"
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "servico",
+                "peca"
+              ]
+            },
+            "description": "Filtra por tipo"
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Cadastrar item no catálogo (tipo servico|peca, valor em centavos)",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "201": {
+            "description": "Criado"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tipo": {
+                    "type": "string"
+                  },
+                  "descricao": {
+                    "type": "string"
+                  },
+                  "valor_centavos": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalogo/{item_id}": {
+      "put": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Editar item do catálogo (parcial; ativo=true reativa)",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tipo": {
+                    "type": "string"
+                  },
+                  "descricao": {
+                    "type": "string"
+                  },
+                  "valor_centavos": {
+                    "type": "integer"
+                  },
+                  "ativo": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Desativar item do catálogo (não apaga: OS antigas guardam o preço)",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/veiculos/{veiculo_id}/historico": {
+      "get": {
+        "tags": [
+          "Histórico e Financeiro"
+        ],
+        "summary": "Histórico de OS do veículo (mais nova primeiro) e último km",
+        "description": "Papéis permitidos: dono, mecanico, cliente. A permissão é verificada no backend. Mecânico vê só as OS atribuídas a ele; cliente só os próprios veículos e nunca recebe valores pagos ou devidos (esses campos só vão para o dono).",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "veiculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/os/{os_id}/pagamentos": {
+      "get": {
+        "tags": [
+          "Histórico e Financeiro"
+        ],
+        "summary": "Pagamentos da OS com valor devido, pago e saldo",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Histórico e Financeiro"
+        ],
+        "summary": "Registrar pagamento (OS pronta ou entregue; não passa do saldo)",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend. forma: dinheiro, pix, cartao_credito, cartao_debito, boleto ou outro. pago_em opcional (AAAA-MM-DD, padrão hoje; não pode ser futura).",
+        "responses": {
+          "201": {
+            "description": "Criado"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "valor_centavos": {
+                    "type": "integer"
+                  },
+                  "forma": {
+                    "type": "string"
+                  },
+                  "pago_em": {
+                    "type": "string"
+                  },
+                  "observacao": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/os/{os_id}/pagamentos/{pagamento_id}": {
+      "delete": {
+        "tags": [
+          "Histórico e Financeiro"
+        ],
+        "summary": "Remover pagamento da OS",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "404": {
+            "description": "Registro não encontrado (ou de outra oficina)"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "os_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pagamento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/financeiro/resumo": {
+      "get": {
+        "tags": [
+          "Histórico e Financeiro"
+        ],
+        "summary": "Resumo financeiro do mês",
+        "description": "Papéis permitidos: dono. A permissão é verificada no backend. faturado_centavos soma os pagamentos pelo dia do pagamento (pago_em); os_entregues conta pela data de entrega; a_receber_centavos é a posição de hoje, independente do mês.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Papel sem permissão para esta ação"
+          },
+          "409": {
+            "description": "Conflito (regra de negócio)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "mes",
+            "in": "query",
+            "required": false,
+            "description": "Mês no formato AAAA-MM (padrão: mês corrente em Brasília)",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
             }
           }
         ]
