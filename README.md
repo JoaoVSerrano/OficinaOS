@@ -4,7 +4,7 @@
 
 > Projeto da disciplina **ISW055 — Introdução à Computação em Nuvem** (Fatec Pompeia), professor [Allan Siriani](https://github.com/siriani). Aluno: João Victor Serrano.
 >
-> **No ar:** URL_NO_AR (preencher após o deploy no Portainer) · **Relatório P2:** `docs/P2_ISW055_Joao_Serrano.pdf` (disponível na entrega da P2) · **Banco:** [db/](db/) · **API:** `/docs` (Swagger)
+> **Relatório P2:** `docs/P2_ISW055_Joao_Serrano_assinado.pdf` (disponível na entrega da P2) · **Banco:** [db/](db/) · **API:** `/docs` (Swagger)
 >
 > **Os valores em R$, horas e quantidades da seção 1 a 7 são estimativas minhas, para raciocinar sobre o negócio. Não vêm de pesquisa ou fonte oficial.**
 
